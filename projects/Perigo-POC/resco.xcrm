@@ -547,6 +547,27 @@
         </index>
       </indexes>
     </entity>
+    <entity schema="pr_drop" haslabels="true" xattr="2097152">
+      <properties>
+        <property schema="createdby"/>
+        <property schema="createdon"/>
+        <property schema="id"/>
+        <property schema="modifiedon"/>
+        <property schema="name"/>
+      </properties>
+      <indexes>
+        <index schema="idx_pr_drop_createdby" issystem="true">
+          <fields>
+            <field schema="createdby"/>
+          </fields>
+        </index>
+        <index schema="idx_pr_drop_name" issystem="true">
+          <fields>
+            <field schema="name"/>
+          </fields>
+        </index>
+      </indexes>
+    </entity>
     <entity schema="pricelevel">
       <properties>
         <property schema="begindate"/>
