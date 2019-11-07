@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<Dashboard xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Columns>2</Columns>
+  <Rows>1</Rows>
+  <Items>
+    <DashboardComponent xsi:type="DashboardEntityComponent" Kind="Chart" Binding="salesorder">
+      <Bounds>0,0,1,1</Bounds>
+    </DashboardComponent>
+    <DashboardComponent xsi:type="DashboardEntityComponent" Kind="Chart" Binding="opportunity">
+      <Bounds>1,0,1,1</Bounds>
+    </DashboardComponent>
+  </Items>
+</Dashboard>

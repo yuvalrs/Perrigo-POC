@@ -1,0 +1,1 @@
+﻿@Dashboard,pr_rout;;<extra><views>pr_rout.*:pr_rout.@Default</views><actions>0;0;1</actions></extra>,@Map,@activity,@Tourplan,account;;<extra><views>account.*:account.@Default</views><actions>0;0;1</actions></extra>,contact,@Setup,@About
