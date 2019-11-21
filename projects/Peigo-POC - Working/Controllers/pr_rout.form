@@ -1,0 +1,52 @@
+﻿<EntityForm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:dummy="0" flexi="0" fleximode="1" fullscreen="0" resize="0" version="2">
+  <IsContactForm>false</IsContactForm>
+  <EntityName>pr_rout</EntityName>
+  <CamelCase>pr_rout</CamelCase>
+  <PrimaryCommands>custom_scanDeliveryItem|Scan|</PrimaryCommands>
+  <EnabledWorkflows>OnLoadEnabled OnChangeEnabled OnSaveEnabled OnExecuteCommand OnCanExecuteCommand OnExecuteButton</EnabledWorkflows>
+  <SerializedChildrenV2>
+    <FormTab xsi:type="DetailTab">
+      <Name>General</Name>
+      <SerializedChildren>
+        <DetailItem SchemaName="name"/>
+        <DetailItem SchemaName="id"/>
+        <DetailItem separator="true" xsi:type="SeparatorDetailItem">
+          <IsConstant>true</IsConstant>
+        </DetailItem>
+        <DetailItem SchemaName="rout_car_reg"/>
+        <DetailItem SchemaName="driverid"/>
+        <DetailItem separator="true" xsi:type="SeparatorDetailItem">
+          <IsConstant>true</IsConstant>
+        </DetailItem>
+        <DetailItem SchemaName="rout_date"/>
+        <DetailItem SchemaName="rout_approved"/>
+        <DetailItem SchemaName="rout_fulfilled"/>
+        <DetailItem separator="true" xsi:type="SeparatorDetailItem">
+          <IsConstant>true</IsConstant>
+        </DetailItem>
+        <DetailItem SchemaName="statuscode"/>
+      </SerializedChildren>
+    </FormTab>
+    <FormTab xsi:type="IFrameTab">
+      <Name>scanDeliveryItem</Name>
+      <Url>file://scanDeliveryItem.html</Url>
+      <DelayLoad>false</DelayLoad>
+    </FormTab>
+    <FormTab xsi:type="DetailTab">
+      <Name>General</Name>
+      <SerializedChildren>
+        <DetailItem SchemaName="rout_planned_drops"/>
+        <DetailItem SchemaName="rout_actual_deliveries"/>
+        <DetailItem SchemaName="rout_actual_drops"/>
+      </SerializedChildren>
+    </FormTab>
+    <FormTab xsi:type="AssociatedTab">
+      <Name>אספקות List</Name>
+      <Binding SchemaName="pr_delivery.route"/>
+    </FormTab>
+    <FormTab xsi:type="AssociatedTab">
+      <Name>נקודות מסירה List</Name>
+      <Binding SchemaName="pr_drop.routid"/>
+    </FormTab>
+  </SerializedChildrenV2>
+</EntityForm>

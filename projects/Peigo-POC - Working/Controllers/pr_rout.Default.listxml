@@ -1,0 +1,51 @@
+﻿<EntityList>
+  <Attributes>
+    <EntityName>pr_rout</EntityName>
+    <CamelCase>pr_rout</CamelCase>
+  </Attributes>
+  <Name>Default</Name>
+  <Kind>List</Kind>
+  <AutoWideWidth>0</AutoWideWidth>
+  <OrderBy>name</OrderBy>
+  <SerializedBindings>
+    <string>id</string>
+    <string>rout_car_reg</string>
+    <string>rout_number</string>
+    <string>driverid</string>
+    <string>createdon</string>
+    <string>statuscode</string>
+    <string>rout_fulfilled</string>
+    <string>rout_approved</string>
+    <string>name</string>
+  </SerializedBindings>
+  <MaxColumns>0</MaxColumns>
+  <SerializedTemplates>
+    <RowTemplate>
+      <DesignWidth>320</DesignWidth>
+      <DesignHeight>48</DesignHeight>
+      <Name>Default</Name>
+      <Width>240</Width>
+      <Height>48</Height>
+      <SerializedChildren>
+        <CellTemplate SchemaName="name">
+          <StyleName>Primary Right</StyleName>
+          <Bounds>114,0,124,23</Bounds>
+          <CellKind>0</CellKind>
+          <Anchor>8</Anchor>
+        </CellTemplate>
+        <CellTemplate SchemaName="statuscode">
+          <StyleName>Primary Right</StyleName>
+          <Bounds>0,1,115,23</Bounds>
+          <CellKind>0</CellKind>
+          <Anchor>5</Anchor>
+        </CellTemplate>
+        <CellTemplate SchemaName="driverid">
+          <StyleName>Primary Right</StyleName>
+          <Bounds>0,23,240,23</Bounds>
+          <CellKind>0</CellKind>
+          <Anchor>5</Anchor>
+        </CellTemplate>
+      </SerializedChildren>
+    </RowTemplate>
+  </SerializedTemplates>
+</EntityList>

@@ -1,0 +1,154 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Scan delivery Item</title>
+	<meta http-equiv='X-UA-Compatible' content='IE=edge' />
+	<meta name='viewport' content='initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no'>
+	<script type='text/javascript' src='JSBridge.js'></script>
+</head>
+<body>
+	<script>
+	/** Represents already scanned items */
+var deliveryScanned = [];
+/** Name of command. */
+const COMMAND_NAME = "custom_scanDeliveryItem";
+/**
+ * Get delivery item for passed delivery number and continue with callback. 
+ * @param deliveryNumber delivery number
+ * @param continueWith Callcabk what is called in case of success with entity if exists.
+ */
+function getDeliveryItem(deliveryNumber, continueWith) {
+    //var delE = new MobileCRM.FetchXml.Entity("account");
+    //delE.addAttributes(); // this must be the name of field what represents the match of scanned value
+    //delE.filter = new MobileCRM.FetchXml.Filter();
+    //delE.filter.where("id", "eq", "717d4fbb-596d-4d69-887d-482bd78ff7fe");
+    ////MobileCRM.bridge.alert(JSON.stringify(delE.filter));
+    //var fetch = new MobileCRM.FetchXml.Fetch(delE);
+    //fetch.execute("DynamicEntities", res => {
+    //	MobileCRM.bridge.alert(JSON.stringify(res[0]));
+    //	//continueWith(res[0]);
+    //}, (err) => { MobileCRM.bridge.alert("Failed to load account items.\nErr: " + err); }, null);
+   
+    MobileCRM.bridge.alert("deliveryNumber: " + deliveryNumber + "\ncontinueWith: " + continueWith); 
+
+    var delE = new MobileCRM.FetchXml.Entity("pr_delivery");
+    delE.addAttributes(); // this must be the name of field what represents the match of scanned value
+    delE.filter = new MobileCRM.FetchXml.Filter();
+    delE.filter.where("barcode", "like", deliveryNumber);
+    ///MobileCRM.bridge.alert(JSON.stringify(delE.filter));
+    var fetch = new MobileCRM.FetchXml.Fetch(delE);
+    fetch.execute("DynamicEntities", res => {
+     // MobileCRM.bridge.alert(JSON.stringify(res[0]));
+
+        continueWith(res[0]);
+    }, (err) => { MobileCRM.bridge.alert("Failed to load delivery items.\nErr: " + err); }, null);
+}
+/**
+ * Get Approved deliveries for passed id.
+ * @param id id of route entity.
+ */
+function getApprovedDeliveries(id) {
+    //Fetch all entities of pr_delivery to determine scanned items already
+    var delE = new MobileCRM.FetchXml.Entity("pr_delivery");
+    delE.addAttributes(); // this must be the name of field what represents the match of scanned value
+    delE.filter = new MobileCRM.FetchXml.Filter();
+    var cnd1 = new MobileCRM.FetchXml.Condition();
+    cnd1.attribute = "route";
+    cnd1.operator = "eq";
+    cnd1.value = id;
+    var cnd2 = new MobileCRM.FetchXml.Condition();
+    cnd2.attribute = "delivery_approved";
+    cnd2.operator = "eq";
+    cnd2.value = true;
+    delE.filter.conditions.push(cnd1, cnd2);
+    delE.filter.type = "and";
+    var fetch = new MobileCRM.FetchXml.Fetch(delE);
+    fetch.execute("DynamicEntities", res => {
+        for (var e of res)
+            deliveryScanned.push(e.properties.delivery_number);
+    }, (err) => { MobileCRM.bridge.alert("Failed to load delivery items.\nErr: " + err); }, null);
+}
+/** Initialization phase for script. Set command whether can be executed or not and register command handler.
+ *  find whether any scanned items exists. @see getApprovedDeliveries
+ */
+function init() {
+    MobileCRM.UI.EntityForm.onCanExecuteCommand(COMMAND_NAME, entityForm => {
+        var entity = entityForm.entity;
+        if (!entity.properties.rout_approved) {
+            if (entity.properties.rout_planed_deliveries) {
+                if (entity.properties.rout_planed_deliveries === entity.properties.rout_actual_deliveries)
+                    return false;
+            }
+            getApprovedDeliveries(entityForm.entity.id);
+            return true;
+        }
+        return !entityForm.entity.properties.rout_approved;
+    }, true);
+    MobileCRM.UI.EntityForm.onCommand(COMMAND_NAME, entityForm => {
+        scanDeliveryItem(entityForm.entity.properties.rout_planned_deliveries);
+    }, true, null);
+}
+/**
+ * Start scan process for delivery item, if scanned item match to barcode, it will set the required flags and properties on route and delivery entity.
+ * @param rout_planned_deliveries planned count what should be scanned for current route.
+ */
+function scanDeliveryItem(rout_planned_deliveries) {
+    if (deliveryScanned.length === rout_planned_deliveries) {
+        MobileCRM.bridge.alert("Everything is scanned successfully");
+        MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
+    }
+    else {
+        MobileCRM.Platform.scanBarCode(res => {
+            var barcode = res[0];
+            //just for testing
+            //barcode = "501978043";
+            if (deliveryScanned.findIndex(x => x === barcode) === -1) { // item was not scanned yet
+                getDeliveryItem(barcode, (entity) => {
+                    if (entity) {
+                        deliveryScanned.push(barcode);
+                        if (entity.properties.delivery_approved) { // this should not happens, since at the beginning we check approved deliveries.
+                            scanDeliveryItem(deliveryScanned.length);
+                            return;
+                        }
+                        entity.properties.delivery_approved = true;
+                        entity.save(err => {
+                            if (err)
+                                MobileCRM.bridge.alert("Save 'delivery_approved' property on 'pr_delivery' entity failed");
+                            else {
+                                setRouteEntityProperties(deliveryScanned.length);
+                            }
+                        });
+                    }
+                });
+            }
+        }, (err) => {
+            if (err !== "Failed")
+                MobileCRM.bridge.alert("Failed to scan barcode.\nErr: " + err);
+        }, null);
+    }
+}
+/**
+ * Set required entity form properties (count and approved route flag )
+ * @param count of scanned items.
+ */
+function setRouteEntityProperties(count) {
+    MobileCRM.UI.EntityForm.requestObject(entityForm => {
+        entityForm.entity.properties.route_actual_deliveries = count;
+        if (count === entityForm.entity.properties.rout_planned_deliveries) {
+            entityForm.entity.properties.rout_approved = true;
+            MobileCRM.bridge.alert("Everything is scanned successfully");
+            MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
+        }
+        else {
+            // try to scan again if it is possible.
+            scanDeliveryItem(entityForm.entity.properties.rout_planned_deliveries);
+        }
+        // apply changes
+        return true;
+    }, MobileCRM.bridge.alert, null);
+}
+window.onload = function () { init(); };
+	</script>
+</body>
+</html>
