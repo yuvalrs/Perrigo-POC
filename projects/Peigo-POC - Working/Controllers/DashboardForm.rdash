@@ -1,13 +1,18 @@
-<?xml version="1.0"?>
-<Dashboard xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <Columns>2</Columns>
+﻿<Dashboard xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:dummy="0">
+  <Columns>3</Columns>
   <Rows>1</Rows>
   <Items>
-    <DashboardComponent xsi:type="DashboardEntityComponent" Kind="Chart" Binding="salesorder">
+    <DashboardComponent xsi:type="DashboardEntityComponent" Kind="List" Binding="pr_rout;&lt;extra&gt;&lt;actions&gt;0;0;1&lt;/actions&gt;&lt;/extra&gt;" Options="3">
       <Bounds>0,0,1,1</Bounds>
+      <LegacyConfig>pr_rout</LegacyConfig>
     </DashboardComponent>
-    <DashboardComponent xsi:type="DashboardEntityComponent" Kind="Chart" Binding="opportunity">
+    <DashboardComponent xsi:type="DashboardEntityComponent" Kind="List" Binding="pr_drop;&lt;extra&gt;&lt;actions&gt;0;0;1&lt;/actions&gt;&lt;/extra&gt;" Options="3">
       <Bounds>1,0,1,1</Bounds>
+      <LegacyConfig>pr_drop</LegacyConfig>
+    </DashboardComponent>
+    <DashboardComponent xsi:type="DashboardEntityComponent" Kind="List" Binding="pr_delivery;&lt;extra&gt;&lt;actions&gt;0;0;1&lt;/actions&gt;&lt;/extra&gt;" Options="3">
+      <Bounds>2,0,1,1</Bounds>
+      <LegacyConfig>pr_delivery</LegacyConfig>
     </DashboardComponent>
   </Items>
 </Dashboard>

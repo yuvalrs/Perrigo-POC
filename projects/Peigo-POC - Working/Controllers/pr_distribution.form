@@ -1,4 +1,4 @@
-﻿<EntityForm xsi:dummy="0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" flexi="0" fleximode="1" fullscreen="0" resize="0" version="2">
+﻿<EntityForm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:dummy="0" flexi="0" fleximode="0" fullscreen="0" resize="0" version="2">
   <IsContactForm>false</IsContactForm>
   <EntityName>pr_distribution</EntityName>
   <CamelCase>pr_distribution</CamelCase>
@@ -10,17 +10,25 @@
       <SerializedChildren>
         <DetailItem SchemaName="name"/>
         <DetailItem SchemaName="dist_number"/>
-        <DetailItem SchemaName="dist_number"/>
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
         </DetailItem>
+        <DetailItem SchemaName="dist_date"/>
         <DetailItem SchemaName="createdon"/>
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
         </DetailItem>
-        <DetailItem SchemaName="statuscode"/>
-        <DetailItem SchemaName="statecode"/>
+        <DetailItem SchemaName="statuscode" Style="CrmListItem"/>
+        <DetailItem SchemaName="statecode" Style="CrmListItem"/>
       </SerializedChildren>
+    </FormTab>
+    <FormTab xsi:type="AssociatedTab">
+      <Name>קווי הפצה List</Name>
+      <Binding SchemaName="pr_rout.distributionid"/>
+    </FormTab>
+    <FormTab xsi:type="AssociatedTab">
+      <Name>אספקות List</Name>
+      <Binding SchemaName="pr_delivery.pr_distribution"/>
     </FormTab>
   </SerializedChildrenV2>
 </EntityForm>

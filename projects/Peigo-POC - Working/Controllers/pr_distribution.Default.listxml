@@ -13,6 +13,7 @@
     <string>statecode</string>
     <string>createdon</string>
     <string>name</string>
+    <string>dist_date</string>
   </SerializedBindings>
   <MaxColumns>0</MaxColumns>
   <SerializedTemplates>
@@ -22,16 +23,17 @@
       <Name>Default</Name>
       <Width>320</Width>
       <Height>48</Height>
+      <Buttons>none</Buttons>
       <SerializedChildren>
-        <CellTemplate SchemaName="name">
-          <StyleName>primary</StyleName>
-          <Bounds>10,2,103,20</Bounds>
+        <CellTemplate SchemaName="dist_date">
+          <StyleName>Primary Center</StyleName>
+          <Bounds>1,10,171,21</Bounds>
           <CellKind>0</CellKind>
-          <Anchor>13</Anchor>
+          <Anchor>5</Anchor>
         </CellTemplate>
         <CellTemplate SchemaName="dist_number">
-          <StyleName>primary</StyleName>
-          <Bounds>116,2,100,20</Bounds>
+          <StyleName>Primary Center</StyleName>
+          <Bounds>176,11,138,20</Bounds>
           <CellKind>0</CellKind>
           <Anchor>5</Anchor>
         </CellTemplate>

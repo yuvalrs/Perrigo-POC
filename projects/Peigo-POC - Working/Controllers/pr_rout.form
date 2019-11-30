@@ -2,13 +2,26 @@
   <IsContactForm>false</IsContactForm>
   <EntityName>pr_rout</EntityName>
   <CamelCase>pr_rout</CamelCase>
-  <PrimaryCommands>custom_scanDeliveryItem|Scan|</PrimaryCommands>
+  <PrimaryCommands>custom_scanDeliveryItem|סריקה|</PrimaryCommands>
   <EnabledWorkflows>OnLoadEnabled OnChangeEnabled OnSaveEnabled OnExecuteCommand OnCanExecuteCommand OnExecuteButton</EnabledWorkflows>
   <SerializedChildrenV2>
-    <FormTab xsi:type="DetailTab">
-      <Name>General</Name>
+    <FormTab xsi:type="AssociatedTab" flexiHeight="16">
+      <Name>אספקות</Name>
+      <CustomName>אספקות</CustomName>
+      <Binding SchemaName="pr_delivery.route"/>
+    </FormTab>
+    <FormTab xsi:type="AssociatedTab" flexiHeight="8" flexiCollapsed="1" DocCommands="0">
+      <Name>נקודות מסירה</Name>
+      <CustomName>נקודות מסירה</CustomName>
+      <Binding SchemaName="pr_drop.routid"/>
+    </FormTab>
+    <FormTab xsi:type="DetailTab" flexi="1" flexiCollapsed="1">
+      <Name>פרטים</Name>
       <SerializedChildren>
         <DetailItem SchemaName="name"/>
+        <DetailItem separator="true" xsi:type="SeparatorDetailItem">
+          <IsConstant>true</IsConstant>
+        </DetailItem>
         <DetailItem SchemaName="id"/>
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
@@ -24,29 +37,18 @@
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
         </DetailItem>
-        <DetailItem SchemaName="statuscode"/>
+        <DetailItem SchemaName="rout_planned_drops"/>
+        <DetailItem SchemaName="rout_actual_drops"/>
+        <DetailItem SchemaName="distributionid"/>
+        <DetailItem SchemaName="Button1" button="true" buttonLabel="" buttonClickText="סריקה">
+          <IsConstant>true</IsConstant>
+        </DetailItem>
       </SerializedChildren>
     </FormTab>
-    <FormTab xsi:type="IFrameTab">
-      <Name>scanDeliveryItem</Name>
+    <FormTab xsi:type="IFrameTab" flexiHeader="0" flexiCollapsed="1" FlexiExpandVisibility="2">
+      <Name>סריקה</Name>
       <Url>file://scanDeliveryItem.html</Url>
       <DelayLoad>false</DelayLoad>
-    </FormTab>
-    <FormTab xsi:type="DetailTab">
-      <Name>General</Name>
-      <SerializedChildren>
-        <DetailItem SchemaName="rout_planned_drops"/>
-        <DetailItem SchemaName="rout_actual_deliveries"/>
-        <DetailItem SchemaName="rout_actual_drops"/>
-      </SerializedChildren>
-    </FormTab>
-    <FormTab xsi:type="AssociatedTab">
-      <Name>אספקות List</Name>
-      <Binding SchemaName="pr_delivery.route"/>
-    </FormTab>
-    <FormTab xsi:type="AssociatedTab">
-      <Name>נקודות מסירה List</Name>
-      <Binding SchemaName="pr_drop.routid"/>
     </FormTab>
   </SerializedChildrenV2>
 </EntityForm>

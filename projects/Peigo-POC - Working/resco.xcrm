@@ -545,6 +545,7 @@
         <property schema="delivery_notes"/>
         <property schema="delivery_number"/>
         <property schema="delivery_planned_packages"/>
+        <property schema="delivery_scanned"/>
         <property schema="delivery_target_wh"/>
         <property schema="delivery_type"/>
         <property schema="dropid"/>
@@ -587,6 +588,7 @@
     <entity schema="pr_distribution">
       <properties>
         <property schema="createdon"/>
+        <property schema="dist_date"/>
         <property schema="dist_number"/>
         <property schema="id"/>
         <property schema="modifiedon"/>

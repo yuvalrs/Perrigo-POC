@@ -1,5 +1,4 @@
-﻿<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
 <head>
 	<meta charset="utf-8" />
 	<title>Scan delivery Item</title>
@@ -9,146 +8,433 @@
 </head>
 <body>
 	<script>
-	/** Represents already scanned items */
-var deliveryScanned = [];
-/** Name of command. */
-const COMMAND_NAME = "custom_scanDeliveryItem";
-/**
- * Get delivery item for passed delivery number and continue with callback. 
- * @param deliveryNumber delivery number
- * @param continueWith Callcabk what is called in case of success with entity if exists.
- */
-function getDeliveryItem(deliveryNumber, continueWith) {
-    //var delE = new MobileCRM.FetchXml.Entity("account");
-    //delE.addAttributes(); // this must be the name of field what represents the match of scanned value
-    //delE.filter = new MobileCRM.FetchXml.Filter();
-    //delE.filter.where("id", "eq", "717d4fbb-596d-4d69-887d-482bd78ff7fe");
-    ////MobileCRM.bridge.alert(JSON.stringify(delE.filter));
-    //var fetch = new MobileCRM.FetchXml.Fetch(delE);
-    //fetch.execute("DynamicEntities", res => {
-    //	MobileCRM.bridge.alert(JSON.stringify(res[0]));
-    //	//continueWith(res[0]);
-    //}, (err) => { MobileCRM.bridge.alert("Failed to load account items.\nErr: " + err); }, null);
-   
-    MobileCRM.bridge.alert("deliveryNumber: " + deliveryNumber + "\ncontinueWith: " + continueWith); 
+        
+        //#region globals
+        var deliveryScanned = []; // represents already scanned items
+        const COMMAND_NAME = "custom_scanDeliveryItem"; // name of command
+        var showAlerts = false;  // control param
+        var debug = false;       // control param
+        //#endregion globals
 
-    var delE = new MobileCRM.FetchXml.Entity("pr_delivery");
-    delE.addAttributes(); // this must be the name of field what represents the match of scanned value
-    delE.filter = new MobileCRM.FetchXml.Filter();
-    delE.filter.where("barcode", "like", deliveryNumber);
-    ///MobileCRM.bridge.alert(JSON.stringify(delE.filter));
-    var fetch = new MobileCRM.FetchXml.Fetch(delE);
-    fetch.execute("DynamicEntities", res => {
-     // MobileCRM.bridge.alert(JSON.stringify(res[0]));
+        //#region orgcode
 
-        continueWith(res[0]);
-    }, (err) => { MobileCRM.bridge.alert("Failed to load delivery items.\nErr: " + err); }, null);
-}
-/**
- * Get Approved deliveries for passed id.
- * @param id id of route entity.
- */
-function getApprovedDeliveries(id) {
-    //Fetch all entities of pr_delivery to determine scanned items already
-    var delE = new MobileCRM.FetchXml.Entity("pr_delivery");
-    delE.addAttributes(); // this must be the name of field what represents the match of scanned value
-    delE.filter = new MobileCRM.FetchXml.Filter();
-    var cnd1 = new MobileCRM.FetchXml.Condition();
-    cnd1.attribute = "route";
-    cnd1.operator = "eq";
-    cnd1.value = id;
-    var cnd2 = new MobileCRM.FetchXml.Condition();
-    cnd2.attribute = "delivery_approved";
-    cnd2.operator = "eq";
-    cnd2.value = true;
-    delE.filter.conditions.push(cnd1, cnd2);
-    delE.filter.type = "and";
-    var fetch = new MobileCRM.FetchXml.Fetch(delE);
-    fetch.execute("DynamicEntities", res => {
-        for (var e of res)
-            deliveryScanned.push(e.properties.delivery_number);
-    }, (err) => { MobileCRM.bridge.alert("Failed to load delivery items.\nErr: " + err); }, null);
-}
-/** Initialization phase for script. Set command whether can be executed or not and register command handler.
- *  find whether any scanned items exists. @see getApprovedDeliveries
- */
-function init() {
-    MobileCRM.UI.EntityForm.onCanExecuteCommand(COMMAND_NAME, entityForm => {
-        var entity = entityForm.entity;
-        if (!entity.properties.rout_approved) {
-            if (entity.properties.rout_planed_deliveries) {
-                if (entity.properties.rout_planed_deliveries === entity.properties.rout_actual_deliveries)
-                    return false;
-            }
-            getApprovedDeliveries(entityForm.entity.id);
-            return true;
-        }
-        return !entityForm.entity.properties.rout_approved;
-    }, true);
-    MobileCRM.UI.EntityForm.onCommand(COMMAND_NAME, entityForm => {
-        scanDeliveryItem(entityForm.entity.properties.rout_planned_deliveries);
-    }, true, null);
-}
-/**
- * Start scan process for delivery item, if scanned item match to barcode, it will set the required flags and properties on route and delivery entity.
- * @param rout_planned_deliveries planned count what should be scanned for current route.
- */
-function scanDeliveryItem(rout_planned_deliveries) {
-    if (deliveryScanned.length === rout_planned_deliveries) {
-        MobileCRM.bridge.alert("Everything is scanned successfully");
-        MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
-    }
-    else {
-        MobileCRM.Platform.scanBarCode(res => {
-            var barcode = res[0];
-            //just for testing
-            //barcode = "501978043";
-            if (deliveryScanned.findIndex(x => x === barcode) === -1) { // item was not scanned yet
-                getDeliveryItem(barcode, (entity) => {
-                    if (entity) {
-                        deliveryScanned.push(barcode);
-                        if (entity.properties.delivery_approved) { // this should not happens, since at the beginning we check approved deliveries.
-                            scanDeliveryItem(deliveryScanned.length);
-                            return;
-                        }
-                        entity.properties.delivery_approved = true;
-                        entity.save(err => {
-                            if (err)
-                                MobileCRM.bridge.alert("Save 'delivery_approved' property on 'pr_delivery' entity failed");
-                            else {
-                                setRouteEntityProperties(deliveryScanned.length);
-                            }
-                        });
+        /** getDeliveryItem
+        * Get delivery item for passed delivery number and continue with callback. 
+        * @param deliveryNumber delivery number
+        * @param continueWith Callcabk what is called in case of success with entity if exists.
+        */
+        function getDeliveryItem(deliveryNumber, continueWith) 
+        {
+            if(showAlerts) MobileCRM.bridge.alert("getDeliveryItem\ndeliveryNumber: " + deliveryNumber);
+            
+            //#region temp_code
+            // var delE = new MobileCRM.FetchXml.Entity("account");
+            // delE.addAttributes(); // this must be the name of field what represents the match of scanned value
+            // delE.filter = new MobileCRM.FetchXml.Filter();
+            // delE.filter.where("id", "eq", "717d4fbb-596d-4d69-887d-482bd78ff7fe");
+            // MobileCRM.bridge.alert(JSON.stringify(delE.filter));
+            // var fetch = new MobileCRM.FetchXml.Fetch(delE);
+            // fetch.execute("DynamicEntities", res => {
+            //	MobileCRM.bridge.alert(JSON.stringify(res[0]));
+            //	continueWith(res[0]);
+            // }, (err) => { MobileCRM.bridge.alert("Failed to load account items.\nErr: " + err); }, null);
+            //#endregion temp_code
+            
+            var deliveryEntity= new MobileCRM.FetchXml.Entity("pr_delivery");
+            deliveryEntity.addAttributes(); // this must be the name of field what represents the match of scanned value
+            
+            filter= new MobileCRM.FetchXml.Filter();
+            filter.where("barcode", "like",  deliveryNumber);
+            deliveryEntity.filter = filter;
+            
+            var fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity);
+            fetch.execute("DynamicEntities", res => 
+            {
+                // MobileCRM.bridge.alert(JSON.stringify(res[0]));
+                var rec = res[0];             
+
+                //#region test_rec
+                // try {
+                // a = rec.properties.barcode;
+                // MobileCRM.bridge.alert("okay: " + a); 
+                // MobileCRM.bridge.alert("okay: " + JSON.stringify(rec)); 
+                // } catch (e) {MobileCRM.bridge.alert("Error: " + e.message); }
+                //#endregion test_rec
+               
+                if(showAlerts)
+                    MobileCRM.bridge.alert("deliveryNumber: " + deliveryNumber + "\nbarcode: " + rec.properties.barcode);
+
+                continueWith(res[0]);
+
+            }, (err) => { MobileCRM.bridge.alert("Failed to load delivery items.\nErr: " + err); }, null);
+        } // getDeliveryItem
+
+
+        /** Get approved deliveries, fill deliveryScanned array
+        * Get Scanned deliveries for passed id.
+        * @param id id of route entity.
+        */
+        function getApprovedDeliveries(id) 
+        {
+            //Fetch all entities of pr_delivery to determine scanned items already
+            var delE = new MobileCRM.FetchXml.Entity("pr_delivery");
+            delE.addAttributes(); // this must be the name of field what represents the match of scanned value
+            delE.filter = new MobileCRM.FetchXml.Filter();
+            var cnd1 = new MobileCRM.FetchXml.Condition();
+            cnd1.attribute = "route";
+            cnd1.operator = "eq";
+            cnd1.value = id;
+            
+            var cnd2 = new MobileCRM.FetchXml.Condition();
+            cnd2.attribute = "delivery_approved";
+            cnd2.operator = "eq";
+            cnd2.value = true;
+            delE.filter.conditions.push(cnd1, cnd2);
+            delE.filter.type = "and";
+            
+            var fetch = new MobileCRM.FetchXml.Fetch(delE);
+            fetch.execute("DynamicEntities", res => 
+            {
+                for (var e of res)
+                    deliveryScanned.push(e.properties.delivery_number);
+
+                    // MobileCRM.bridge.alert("deliveryScanned: " + deliveryScanned);    
+
+            }, (err) => { MobileCRM.bridge.alert("Failed to load delivery items.\nErr: " + err); }, null);
+        } // getApprovedDeliveries
+
+
+        /** Initialization phase for script. 
+        *  Set command whether can be executed or not and register command handler.
+        *  find whether any scanned items exists. @see getApprovedDeliveries
+        */
+        async function init() 
+        {
+            // MobileCRM.bridge.log("JSBridge initialized.");
+            if (debug) await MobileCRM.UI.MessageBox.sayText("JSBridge initialized.");
+            
+            // MobileCRM.UI.EntityList.reload();
+            // await MobileCRM.UI.MessageBox.sayText("List reloaded");
+
+            // ---- Tests -----
+            // ES6
+            // var text = "Thank you for using this method\nPress OK to continue.";
+            // await MobileCRM.UI.MessageBox.sayText(text);
+            
+
+            MobileCRM.UI.EntityForm.onCanExecuteCommand(COMMAND_NAME, entityForm => 
+            {
+                //-------
+                debugger;
+                //-------
+
+                var entity = entityForm.entity;
+                // ----------------------------------------------------------
+                var entityName = entity.entityName;
+                var planned = (entity.properties.rout_planned_deliveries || 0);
+                var actual = (entity.properties.rout_actual_deliveries || 0);
+                var approved = (entity.properties.rout_approved || false); 
+                var scannedAll = (entity.properties.rout_planned_deliveries === entity.properties.rout_actual_deliveries);
+
+                if(showAlerts) MobileCRM.bridge.alert("onCanExecuteCommand\nEntity: " + entityName + "\nApproved: " + approved + "\nPlanned: " + planned + 
+                                                                         "\nActual: " + actual + "\nAll Scanned : " + scannedAll);
+                // -----------------------------------------------------------
+
+
+
+                if (!entity.properties.rout_approved) 
+                {
+                    if (entity.properties.rout_planed_deliveries) 
+                    {
+                        if (entity.properties.rout_planned_deliveries === entity.properties.rout_actual_deliveries)
+                            return false;
                     }
-                });
+                    getApprovedDeliveries(entityForm.entity.id);
+                    return true;
+                }
+                return !entityForm.entity.properties.rout_approved;
+
+            }, true);
+
+            MobileCRM.UI.EntityForm.onCommand(COMMAND_NAME, entityForm => 
+            {
+                scanDeliveryItem(entityForm.entity.properties.rout_planned_deliveries);
+            }, true, null); // onCanExecuteCommand
+
+        } // init
+
+
+        /** scanDeliveryItem
+        * Start scan process for delivery item, if scanned item match to barcode, 
+        * it will set the required flags and properties on route and delivery entity.
+        * @param rout_planned_deliveries planned count what should be scanned for current route.
+        */
+        function scanDeliveryItem(rout_planned_deliveries)
+        {
+
+            if (deliveryScanned.length === rout_planned_deliveries)  
+            {
+                // scannedAllRoutDeliveries - Cancel command
+                MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
             }
-        }, (err) => {
-            if (err !== "Failed")
-                MobileCRM.bridge.alert("Failed to scan barcode.\nErr: " + err);
-        }, null);
-    }
-}
-/**
- * Set required entity form properties (count and approved route flag )
- * @param count of scanned items.
- */
-function setRouteEntityProperties(count) {
-    MobileCRM.UI.EntityForm.requestObject(entityForm => {
-        entityForm.entity.properties.route_actual_deliveries = count;
-        if (count === entityForm.entity.properties.rout_planned_deliveries) {
-            entityForm.entity.properties.rout_approved = true;
-            MobileCRM.bridge.alert("Everything is scanned successfully");
-            MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
-        }
-        else {
-            // try to scan again if it is possible.
-            scanDeliveryItem(entityForm.entity.properties.rout_planned_deliveries);
-        }
-        // apply changes
-        return true;
-    }, MobileCRM.bridge.alert, null);
-}
-window.onload = function () { init(); };
+            else // !scannedAllRoutDeliveries
+            {
+                MobileCRM.Platform.scanBarCode(res => 
+                {
+                    var barcode = res[0];
+                    //just for testing
+                    //barcode = "501978043";
+                    if (deliveryScanned.findIndex(x => x === barcode) === -1) // notFound
+                    { 
+                        // item was not scanned yet
+                        getDeliveryItem(barcode, (entity) => 
+                        {
+                            if (entity) 
+                            {
+                                deliveryScanned.push(barcode);
+                                if (entity.properties.delivery_approved) 
+                                { // this should not happens, since at the beginning we check approved deliveries.
+                                    scanDeliveryItem(deliveryScanned.length);
+                                    return;
+                                }
+                                entity.properties.delivery_approved = true;
+                                
+                                // ----- YR ----
+                                if (debug) MobileCRM.bridge.alert("Planned: " + rout_planned_deliveries + " Scanned: " + deliveryScanned.length);
+                                // -------------
+
+                                entity.save(err => 
+                                {
+                                    if (err)
+                                    {
+                                        MobileCRM.bridge.alert("Save 'delivery_approved' property on 'pr_delivery' entity failed");
+                                    }
+                                    else { setRouteEntityProperties(deliveryScanned.length); }
+                                });
+
+                            } // if entity
+
+                        }); // getDeliveryItem
+
+                    } // if notFound
+                    else  {
+                        // found -->> try again 
+                    }
+                   
+                }, (err) => {if (err !== "Failed") MobileCRM.bridge.alert("Failed to scan barcode.\nErr: " + err);}, null);
+
+            } // !scannedAllRoutDeliveries
+
+        } // scanDeliveryItem
+
+        
+
+        /** setRouteEntityProperties
+        * Set required entity form properties (count and approved route flag )
+        * @param count of scanned items.
+        */
+        function setRouteEntityProperties(count) 
+        {
+            MobileCRM.UI.EntityForm.requestObject(entityForm => 
+            {
+                entityForm.entity.properties.route_actual_deliveries = count;
+
+                if (count === entityForm.entity.properties.rout_planned_deliveries) 
+                {
+                    
+                    entityForm.entity.properties.rout_approved = true;
+
+                    // --- save rout ---
+                    entityForm.entity.save(err => { if (err) {MobileCRM.bridge.alert("Save 'rout_approved' property on 'pr_rout' entity failed"); } });
+
+                    // ----------------------------------------
+                    // MobileCRM.UI.EntityList.requestObject(function (entityList) 
+                    // {
+                    //     var listView = entityList.listView;
+                    //     listView.selectedIndex = 1;
+                    // }, MobileCRM.bridge.alert, null);
+                    // ---------------------------------------
+                    
+
+                    MobileCRM.bridge.alert("כל האספקות נסרקו בהצלחה.");
+                    MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
+                }
+                else 
+                {
+                    // try to scan again if it is possible.
+                    scanDeliveryItem(entityForm.entity.properties.rout_planned_deliveries);
+                }
+                // apply changes
+                return true;
+
+            }, MobileCRM.bridge.alert, null);
+        } // setRouteEntityProperties
+        
+        
+
+
+       
+        window.onload = function () { init(); };
+
+         //#endregion orgcode
+
+        // =======================================================================
+        //#region init1
+        function init1() 
+        {
+            MobileCRM.bridge.alert("Init1 initialized.");
+
+            var scannedBarcode = null;
+
+            MobileCRM.UI.EntityForm.onCanExecuteCommand(COMMAND_NAME, entityForm => 
+            {
+                //-------
+                debugger;
+                //-------
+
+                var entity = entityForm.entity;
+                // ----------------------------------------------------------
+                var entityName = entity.entityName;
+                var planned = (entity.properties.rout_planned_deliveries || 0);
+                var actual = (entity.properties.rout_actual_deliveries || 0);
+                var approved = (entity.properties.rout_approved || false); 
+                var scannedAll = (entity.properties.rout_planned_deliveries === entity.properties.rout_actual_deliveries);
+
+                if(showAlerts & false) MobileCRM.bridge.alert("onCanExecuteCommand\nEntity: " + entityName + "\nApproved: " + approved + "\nPlanned: " + planned + 
+                                                                        "\nActual: " + actual + "\nAll Scanned : " + scannedAll);
+
+
+                // --------------------------------------------------------------
+                // var text = "Thank you for using this method\nPress OK to continue.";
+                // await MobileCRM.UI.MessageBox.sayText(text);
+                // ----------------------------------------------------------------
+
+
+                // -----------------------------------------------------------
+
+                //#region approve
+                /*
+                if (!entity.properties.rout_approved) 
+                {
+                    if (entity.properties.rout_planed_deliveries) 
+                    {
+                        if (entity.properties.rout_planed_deliveries === entity.properties.rout_actual_deliveries)
+                            return false;
+                    }
+                    getScannedDeliveries(entityForm.entity.id);
+                    return true;
+                }
+                return !entityForm.entity.properties.rout_approved;
+                */
+                //#endregion approve
+            
+            }, true);
+
+            
+            MobileCRM.UI.EntityForm.onCommand(COMMAND_NAME, entityForm => 
+            {
+                scanDeliveryItem1(entityForm.entity.properties.rout_number);
+            }, true, null); // onCommand
+
+        } // init1
+
+
+        var drops  = ['aaaa','bbbb','ccccc'];
+
+        function scanDeliveryItem1(rout_number)
+        {
+            //#region scannedAllRoutDeliveries
+            /*
+            if (deliveryScanned.length === rout_planned_deliveries) // scannedAllRoutDeliveries
+            {
+                MobileCRM.bridge.alert("Everything is scanned successfully");
+                MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
+            }
+            else // !scannedAllRoutDeliveries
+            {
+            */
+            //#endregion scannedAllRoutDeliveries
+
+                MobileCRM.Platform.scanBarCode(res => 
+                {
+                    var barcode = res[0];
+                    
+                    
+
+                    if(showAlerts) MobileCRM.bridge.alert("scannedBarcode: " + res[0]);
+                                        
+                    //#region notFound
+                    /*
+                    if (deliveryScanned.findIndex(x => x === barcode) === -1) // notFound
+                    { 
+                    
+                        // item was not scanned yet
+                        getDeliveryItem(barcode, (entity) => 
+                        {
+                            if (entity) 
+                            {
+                                deliveryScanned.push(barcode);
+                                if (entity.properties.delivery_approved) 
+                                { // this should not happens, since at the beginning we check approved deliveries.
+                                    scanDeliveryItem(deliveryScanned.length);
+                                    return;
+                                }
+                                entity.properties.delivery_approved = true;
+
+                                entity.save(err => 
+                                {
+                                    if (err)
+                                        MobileCRM.bridge.alert("Save 'delivery_approved' property on 'pr_delivery' entity failed");
+                                    else 
+                                    {
+                                        // setRouteEntityProperties(deliveryScanned.length); 
+                                    }
+                                });
+
+                            } // if entity
+
+                        }); // getDeliveryItem
+                    
+                    } // if notFound
+                    */
+                    //#endregion notFound
+
+                    // ----- continue process here ------
+                    drops = GetDeliveryDrops(rout_number);
+                    if(showAlerts) MobileCRM.bridge.alert("Drops: " + drops);
+
+
+                }, (err) => {if (err !== "Failed") MobileCRM.bridge.alert("Failed to scan barcode.\nErr: " + err);}, null);
+
+            //} // !scannedAllRoutDeliveries
+
+        } // scanDeliveryItem
+
+        function GetDeliveryDrops(rout_number)
+        {
+            try
+            {
+                var deliveryEntity= new MobileCRM.FetchXml.Entity("pr_drop");
+                deliveryEntity.addAttributes(); // this must be the name of field what represents the match of scanned value
+                
+                filter= new MobileCRM.FetchXml.Filter();
+                filter.where("barcode", "like",  barcode);
+                deliveryEntity.filter = filter;
+                
+                var fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity);
+                fetch.execute("DynamicEntities", res => 
+                {
+                    // MobileCRM.bridge.alert(JSON.stringify(res[0]));
+                }, (err) => { MobileCRM.bridge.alert("Failed to load delivery items.\nErr: " + err); }, null);        
+
+
+
+            } catch (e) {"Error at GetDeliveryDrops\n" + e.message}
+        } // GetDeliveryDrops
+        
+        //#endregion init1
+
+
 	</script>
 </body>
 </html>

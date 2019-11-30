@@ -6,40 +6,33 @@
   <EnabledWorkflows>OnLoadEnabled OnChangeEnabled OnSaveEnabled OnExecuteCommand OnCanExecuteCommand OnExecuteButton</EnabledWorkflows>
   <SerializedChildrenV2>
     <FormTab xsi:type="DetailTab">
-      <Name>General</Name>
+      <Name>פרטים</Name>
       <SerializedChildren>
         <DetailItem SchemaName="name"/>
-        <DetailItem SchemaName="id"/>
+        <DetailItem SchemaName="delivery_number"/>
         <DetailItem SchemaName="barcode"/>
+        <DetailItem SchemaName="delivery_type"/>
+        <DetailItem SchemaName="delivery_date"/>
+        <DetailItem SchemaName="delivery_approved"/>
+        <DetailItem SchemaName="delivery_fulfilled"/>
+        <DetailItem SchemaName="id"/>
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
         </DetailItem>
+        <DetailItem SchemaName="route"/>
         <DetailItem SchemaName="dropid"/>
         <DetailItem SchemaName="accountid"/>
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
         </DetailItem>
-        <DetailItem SchemaName="delivery_number"/>
-        <DetailItem SchemaName="delivery_type"/>
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
         </DetailItem>
-        <DetailItem SchemaName="route"/>
-        <DetailItem SchemaName="delivery_date"/>
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
         </DetailItem>
-        <DetailItem SchemaName="delivery_fulfilled"/>
         <DetailItem SchemaName="delivery_notes"/>
-      </SerializedChildren>
-    </FormTab>
-    <FormTab xsi:type="DetailTab">
-      <Name>General</Name>
-      <SerializedChildren>
-        <DetailItem SchemaName="barcode"/>
-        <DetailItem SchemaName="delivery_planned_packages"/>
-        <DetailItem SchemaName="delivery_actual_packages"/>
-        <DetailItem SchemaName="delivery_fulfilled"/>
+        <DetailItem SchemaName="delivery_approved"/>
       </SerializedChildren>
     </FormTab>
   </SerializedChildrenV2>
