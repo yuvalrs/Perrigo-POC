@@ -26,6 +26,9 @@
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
         </DetailItem>
+        <DetailItem SchemaName="rout_planned_deliveries"/>
+        <DetailItem SchemaName="rout_actual_deliveries"/>
+        <DetailItem SchemaName="rout_fulfilled"/>
         <DetailItem SchemaName="rout_car_reg"/>
         <DetailItem SchemaName="driverid"/>
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
@@ -33,7 +36,6 @@
         </DetailItem>
         <DetailItem SchemaName="rout_date"/>
         <DetailItem SchemaName="rout_approved"/>
-        <DetailItem SchemaName="rout_fulfilled"/>
         <DetailItem separator="true" xsi:type="SeparatorDetailItem">
           <IsConstant>true</IsConstant>
         </DetailItem>
@@ -45,10 +47,9 @@
         </DetailItem>
       </SerializedChildren>
     </FormTab>
-    <FormTab xsi:type="IFrameTab" flexiHeader="0" flexiCollapsed="1" FlexiExpandVisibility="2">
+    <FormTab xsi:type="IFrameTab">
       <Name>סריקה</Name>
       <Url>file://scanDeliveryItem.html</Url>
-      <DelayLoad>false</DelayLoad>
     </FormTab>
   </SerializedChildrenV2>
 </EntityForm>

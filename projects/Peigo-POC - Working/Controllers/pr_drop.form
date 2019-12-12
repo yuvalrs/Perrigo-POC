@@ -5,8 +5,13 @@
   <PrimaryCommands>!defcmd</PrimaryCommands>
   <EnabledWorkflows>OnLoadEnabled OnChangeEnabled OnSaveEnabled OnExecuteCommand OnCanExecuteCommand OnExecuteButton</EnabledWorkflows>
   <SerializedChildrenV2>
-    <FormTab xsi:type="DetailTab">
+    <FormTab xsi:type="AssociatedTab">
+      <Name>אספקות List</Name>
+      <Binding SchemaName="pr_delivery.dropid"/>
+    </FormTab>
+    <FormTab xsi:type="DetailTab" flexiCollapsed="1">
       <Name>General</Name>
+      <AutoGridColumns>1</AutoGridColumns>
       <SerializedChildren>
         <DetailItem SchemaName="name"/>
         <DetailItem SchemaName="routid"/>
@@ -21,10 +26,6 @@
         <DetailItem SchemaName="drop_fulfilled"/>
         <DetailItem SchemaName="drop_date"/>
       </SerializedChildren>
-    </FormTab>
-    <FormTab xsi:type="AssociatedTab">
-      <Name>אספקות List</Name>
-      <Binding SchemaName="pr_delivery.dropid"/>
     </FormTab>
   </SerializedChildrenV2>
 </EntityForm>

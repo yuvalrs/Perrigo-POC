@@ -7,13 +7,27 @@
 	<script type='text/javascript' src='JSBridge.js'></script>
 </head>
 <body>
-	<script>
-        
+	<script>        
         //#region globals
-        var deliveryScanned = []; // represents already scanned items
-        const COMMAND_NAME = "custom_scanDeliveryItem"; // name of command
-        var showAlerts = false;  // control param
-        var debug = false;       // control param
+        const SCAN_COMMAND = "custom_scanDeliveryItem";  // name of scan command
+        const VERIFY_COMMAND = "custom_verifyScanItems"; // name of verify command
+        
+        let deliveryScanned = [];  // represents already scanned items
+        let dropsScanned = [];
+        let showAlerts = false;  // control param
+        let debug = false;       // control param
+        let logInfo = "-----------\n";
+
+        let routPlannedDeliveries = [];
+        let routApprovedDeliveries = [];
+        let routDrops = [];
+
+        let dropPlannedDeliveries = [];
+        let dropScannedDeliveries = [];
+
+
+
+           
         //#endregion globals
 
         //#region orgcode
@@ -26,19 +40,6 @@
         function getDeliveryItem(deliveryNumber, continueWith) 
         {
             if(showAlerts) MobileCRM.bridge.alert("getDeliveryItem\ndeliveryNumber: " + deliveryNumber);
-            
-            //#region temp_code
-            // var delE = new MobileCRM.FetchXml.Entity("account");
-            // delE.addAttributes(); // this must be the name of field what represents the match of scanned value
-            // delE.filter = new MobileCRM.FetchXml.Filter();
-            // delE.filter.where("id", "eq", "717d4fbb-596d-4d69-887d-482bd78ff7fe");
-            // MobileCRM.bridge.alert(JSON.stringify(delE.filter));
-            // var fetch = new MobileCRM.FetchXml.Fetch(delE);
-            // fetch.execute("DynamicEntities", res => {
-            //	MobileCRM.bridge.alert(JSON.stringify(res[0]));
-            //	continueWith(res[0]);
-            // }, (err) => { MobileCRM.bridge.alert("Failed to load account items.\nErr: " + err); }, null);
-            //#endregion temp_code
             
             var deliveryEntity= new MobileCRM.FetchXml.Entity("pr_delivery");
             deliveryEntity.addAttributes(); // this must be the name of field what represents the match of scanned value
@@ -112,6 +113,11 @@
         {
             // MobileCRM.bridge.log("JSBridge initialized.");
             if (debug) await MobileCRM.UI.MessageBox.sayText("JSBridge initialized.");
+
+            // MobileCRM.UI.Form.showToast("Perrigo", "Please waite...");
+            // MobileCRM.UI.EntityForm.showPleaseWait("Please wait...");  // ok
+
+            // showRoutView();
             
             // MobileCRM.UI.EntityList.reload();
             // await MobileCRM.UI.MessageBox.sayText("List reloaded");
@@ -122,7 +128,7 @@
             // await MobileCRM.UI.MessageBox.sayText(text);
             
 
-            MobileCRM.UI.EntityForm.onCanExecuteCommand(COMMAND_NAME, entityForm => 
+            MobileCRM.UI.EntityForm.onCanExecuteCommand(SCAN_COMMAND, entityForm => 
             {
                 //-------
                 debugger;
@@ -156,7 +162,7 @@
 
             }, true);
 
-            MobileCRM.UI.EntityForm.onCommand(COMMAND_NAME, entityForm => 
+            await MobileCRM.UI.EntityForm.onCommand(SCAN_COMMAND, entityForm => 
             {
                 scanDeliveryItem(entityForm.entity.properties.rout_planned_deliveries);
             }, true, null); // onCanExecuteCommand
@@ -169,17 +175,19 @@
         * it will set the required flags and properties on route and delivery entity.
         * @param rout_planned_deliveries planned count what should be scanned for current route.
         */
-        function scanDeliveryItem(rout_planned_deliveries)
+        async function scanDeliveryItem(rout_planned_deliveries)
         {
-
+            
             if (deliveryScanned.length === rout_planned_deliveries)  
             {
                 // scannedAllRoutDeliveries - Cancel command
-                MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
+                MobileCRM.UI.EntityForm.enableCommand(SCAN_COMMAND, false);
             }
-            else // !scannedAllRoutDeliveries
+            else  // !scannedAllRoutDeliveries
             {
-                MobileCRM.Platform.scanBarCode(res => 
+                
+                // await MobileCRM.UI.MessageBox.sayText("Scanning...");
+                await MobileCRM.Platform.scanBarCode(res => 
                 {
                     var barcode = res[0];
                     //just for testing
@@ -257,9 +265,9 @@
                     
 
                     MobileCRM.bridge.alert("כל האספקות נסרקו בהצלחה.");
-                    MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
+                    MobileCRM.UI.EntityForm.enableCommand(SCAN_COMMAND, false);
                 }
-                else 
+                else  
                 {
                     // try to scan again if it is possible.
                     scanDeliveryItem(entityForm.entity.properties.rout_planned_deliveries);
@@ -274,70 +282,1180 @@
 
 
        
-        window.onload = function () { init(); };
+        window.onload = function () { init1(); };
+
+   
 
          //#endregion orgcode
 
         // =======================================================================
         //#region init1
-        function init1() 
+        async function init1() 
         {
-            MobileCRM.bridge.alert("Init1 initialized.");
+            //#region t1  // samples
+            // --------------------------------------------------------------
+            // MobileCRM.UI.EntityForm.enableCommand(SCAN_COMMAND, false); 
+            // await MobileCRM.bridge.alert("init1 initialized.");
+            // var text = "Thank you for using this method\nPress OK to continue.";
+            // await MobileCRM.UI.MessageBox.sayText(text);
+            // confirmMsg("Wait a minute...");
+            // ----------------------------------------------------------------
+            //#endregion t1
 
             var scannedBarcode = null;
-
-            MobileCRM.UI.EntityForm.onCanExecuteCommand(COMMAND_NAME, entityForm => 
+            
+            MobileCRM.UI.EntityForm.onCanExecuteCommand(SCAN_COMMAND, entityForm => 
             {
-                //-------
-                debugger;
-                //-------
+                if(debug) MobileCRM.bridge.alert("onCanExecuteCommand " + "'" + SCAN_COMMAND + "'");
+                
+                let entity = entityForm.entity;
+                let entityName = entity.entityName;
+                let entityId = entityForm.entity.id;                
+                
+                // initiate getting rout's related deliveries
+                getRoutPlannedDeliveries(entityId) // replaced by handleApproved1 
+
+                // initiate getting rout's approved deliveries
+                getRoutApprovedDeliveries(entityId); // replaced by handleApproved1 
+
+                // initiate getting rout's drops
+                getRoutDrops(entityId);
+
+                let planned = entity.properties.rout_planned_deliveries || 0;
+                let actual = entity.properties.rout_actual_deliveries || 0;
+                let scannedAll = (planned > 0) && (planned === actual);
+                let completed = (entity.properties.rout_approved || scannedAll); 
+                let bindHandler =  (completed ? false : !scannedAll); // determines whether to bind or unbind the handler.
+
+                if (completed)
+                    MobileCRM.UI.EntityForm.enableCommand(SCAN_COMMAND, false);  // Cancel command       
+
+                //#region showParam
+                if(showAlerts) MobileCRM.bridge.alert("onCanExecuteCommand\nEntity: " + entityName + 
+                                                                "\ncompleted: " + completed + 
+                                                                "\nPlanned: " + planned + 
+                                                                "\nActual: " + actual + 
+                                                                "\nAll Scanned : " + scannedAll + 
+                                                                "\nbindHandler: " + bindHandler);
+                //#endregion showParam
+
+            }, true);        // true: bind handler function
+
+            await MobileCRM.UI.EntityForm.onCommand(SCAN_COMMAND, async entityForm => 
+            {
+                // await MobileCRM.bridge.alert("onCommand " + "'" + SCAN_COMMAND + "'");
+
+                //#region t2 // test diffs
+                //----------------------
+                /*
+                let a =[1,2,3];
+                let b =[1,2,3,3];
+
+                let same = sameArrays(a,b);
+                let aDiffb = diffAB(a,b);
+                let bDiffa = diffBA(a,b);
+
+                MobileCRM.bridge.alert(logInfo + "\nSame Arrays: " + same);
+
+                let output = a.filter(item => !b.some(other => item == other));
+                //---------------------
+                */
+                //#endregion t2
 
                 var entity = entityForm.entity;
-                // ----------------------------------------------------------
-                var entityName = entity.entityName;
-                var planned = (entity.properties.rout_planned_deliveries || 0);
-                var actual = (entity.properties.rout_actual_deliveries || 0);
-                var approved = (entity.properties.rout_approved || false); 
-                var scannedAll = (entity.properties.rout_planned_deliveries === entity.properties.rout_actual_deliveries);
 
-                if(showAlerts & false) MobileCRM.bridge.alert("onCanExecuteCommand\nEntity: " + entityName + "\nApproved: " + approved + "\nPlanned: " + planned + 
-                                                                        "\nActual: " + actual + "\nAll Scanned : " + scannedAll);
-
-
-                // --------------------------------------------------------------
-                // var text = "Thank you for using this method\nPress OK to continue.";
-                // await MobileCRM.UI.MessageBox.sayText(text);
-                // ----------------------------------------------------------------
-
-
-                // -----------------------------------------------------------
-
-                //#region approve
-                /*
-                if (!entity.properties.rout_approved) 
-                {
-                    if (entity.properties.rout_planed_deliveries) 
+		        await MobileCRM.Platform.scanBarCode(async res =>
+			    {
+                    if (!res || res.length <= 0) 
                     {
-                        if (entity.properties.rout_planed_deliveries === entity.properties.rout_actual_deliveries)
-                            return false;
+                        MobileCRM.bridge.alert("No barcode"); 	
                     }
-                    getScannedDeliveries(entityForm.entity.id);
-                    return true;
-                }
-                return !entityForm.entity.properties.rout_approved;
-                */
-                //#endregion approve
-            
-            }, true);
+                    else 
+                    {  
+                        let scannedBarcode = res[0];
+                        if(debug) MobileCRM.bridge.alert( "Scanned barcode: " + scannedBarcode);
+                        handleScannedDelivery1(scannedBarcode, entityForm); 
+                    }
+                   
+                }, (err) => {if(err != "Failed") {MobileCRM.bridge.alert("Eror at scanBarCode:\n" + err);} }, null);
+                
+                // scanDeliveryItem1(entityForm.entity.properties.rout_number);
+
+            }, true, null); // true: bind handler function
+           
+            //#region verifyCommand
+            // =======================  VERIFY ================================
+             /*
+            MobileCRM.UI.EntityForm.onCanExecuteCommand(VERIFY_COMMAND, entityForm => 
+            {
+                MobileCRM.UI.EntityForm.enableCommand(VERIFY_COMMAND, true);
+                MobileCRM.bridge.alert("onCanExecuteCommand: verify");    
+
+            }, true); // onCanExecute_VERIFY_COMMAND    true: bind handler function
 
             
-            MobileCRM.UI.EntityForm.onCommand(COMMAND_NAME, entityForm => 
+            await MobileCRM.UI.EntityForm.onCommand(SCAN_COMMAND, async entityForm => 
             {
-                scanDeliveryItem1(entityForm.entity.properties.rout_number);
-            }, true, null); // onCommand
+
+                MobileCRM.bridge.alert("onCommand: verify");   
+
+            }, (err) => {if(err != "Failed") {MobileCRM.bridge.alert("Eror at verify BarCode:\n" + err);} }, null);
+            */
+            // ==============================================================
+            //#endregion verifyCommand
+
+            MobileCRM.UI.EntityList.onChange(entityList => 
+            {
+                try
+                {
+                    /// <param name='entityList' type='MobileCRM.UI.EntityList'/>
+                    let context = entityList.context;
+                    let entityName = context.entities[0].entityName;
+                    let propertyName = context.propertyName;
+
+                    let editedEntities = entityList.context.entities;
+                    let props = editedEntities[0].properties;
+                    let approved = props.delivery_approved;
+                    let routeId = (entityName == 'pr_delivery') ? props.route.id : (entityName == 'pr_rout') ? editedEntities[0].id : null;
+                    let changedEntity = context.entities[0]
+                    // let deliveryId = context.entities[0] ? context.entities[0].id : null;
+                
+                    if(debug) MobileCRM.bridge.alert("Entity name: " + entityName + "    Property: " + propertyName + "   Changed to Approved: " + approved);
+
+                    if(entityName == 'pr_delivery' && propertyName == 'delivery_approved') 
+                    {
+                        // remove barecode if disapproved
+                        let barcode = props.barcode;
+                        let scanned = (deliveryScanned.findIndex(x => x === barcode) > -1);
+                        if(scanned && !approved) deliveryScanned.remove(barcode);
+
+                        // ---- save delivery  -----------
+                        // let delivery = new MobileCRM.DynamicEntity("pr_delivery", deliveryId);
+                        changedEntity.properties.drop_approved = approved;
+                        changedEntity.saveAsync()
+                        .then((savedEntity)=> { })
+                        .catch((err)=> { _alert("onChange: Cannot save delivery: " + err); });
+                        // ---------------------------------------
+
+                       
+                        handleApproved1(routeId,changedEntity,approved);
+
+                        return;
+                    } 
+                } catch(e){_alert("onChange: " + e.message);}
+
+                
+                // MobileCRM.bridge.alert("Planned: " + routPlannedDeliveries + "\nApproved: " + routApprovedDeliveries); 
+            }, MobileCRM.bridge.alert, null);
+            
+
+            //#region EntityList.onClick  works, but overrides workflow scripts
+            /* MobileCRM.UI.EntityList.onClick(entityList => 
+            {
+                /// <param name="entityList" type="MobileCRM.UI.EntityList" />
+                var context = entityList.context;
+                var eventInfo = JSON.stringify(context.event);
+                var entity = context.entities.toString();
+                var property = context.propertyName;
+                
+                
+
+                MobileCRM.bridge.alert("Entity: " + entity + " property: " + property + " was clicked.\nEvent info: " + eventInfo);
+            }, true);  // false: cancel binding  */ 
+            //#endregion EntityList.onClic
 
         } // init1
 
+
+        //#region handleApproved
+        function handleApproved1(routId, changedEntity, approved)
+        {
+            // MobileCRM.bridge.alert("handleApproved1");
+
+            approved = approved || false;
+            if(routPlannedDeliveries.length > 0) routPlannedDeliveries = [];
+            if(routApprovedDeliveries.length > 0) routApprovedDeliveries = [];
+                
+
+            let deliveryEntity = new MobileCRM.FetchXml.Entity("pr_delivery");
+            deliveryEntity.addAttributes(); 
+            deliveryEntity.filter = new MobileCRM.FetchXml.Filter();
+            
+            // deliveryEntity.filter.where("id", "eq",  routId);
+            deliveryEntity.filter.type = "and";
+            var cnd1 = new MobileCRM.FetchXml.Condition();
+            cnd1.attribute = "route";
+            cnd1.operator = "eq";
+            cnd1.value = routId;
+        
+            //var cnd2 = new MobileCRM.FetchXml.Condition();
+            //cnd2.attribute = "delivery_approved";
+            //cnd2.operator = "eq";
+            //cnd2.value = true;
+
+            deliveryEntity.filter.conditions.push(cnd1);
+
+            let fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity);
+            fetch.execute("DynamicEntities", res => 
+            {
+                if(res.length == 0)
+                {
+                    // MobileCRM.bridge.alert("handleApproved1:  No recs");  
+                }
+                else
+                {
+                    for (var rec of res)
+                        routPlannedDeliveries.push(rec.properties.delivery_number);
+
+                    // MobileCRM.bridge.alert("HandleApproved: routPlannedDeliveries: " + routPlannedDeliveries); 
+                    handleApproved2(routId, changedEntity, approved)
+                } 
+            }, (err) => { MobileCRM.bridge.alert("Failed to load rout's planned delivery items.\nErr: " + err); }, null); 
+        } // handleApproved1
+
+        function handleApproved2(routId, changedEntity, approved)
+        {
+            // MobileCRM.bridge.alert("handleApproved2");
+
+            approved = approved || false;
+            
+            let deliveryEntity = new MobileCRM.FetchXml.Entity("pr_delivery");
+            deliveryEntity.addAttributes(); 
+            deliveryEntity.filter = new MobileCRM.FetchXml.Filter();
+            deliveryEntity.filter.type = "and";
+            
+            let cnd1 = new MobileCRM.FetchXml.Condition();
+            cnd1.attribute = "route";
+            cnd1.operator = "eq";
+            cnd1.value = routId;
+            
+            let  cnd2 = new MobileCRM.FetchXml.Condition();
+            cnd2.attribute = "delivery_approved";
+            cnd2.operator = "eq";
+            cnd2.value = true;
+            deliveryEntity.filter.conditions.push(cnd1, cnd2);
+             
+            let fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity); 
+            fetch.execute("DynamicEntities", res => 
+            {
+                if(res.length > 0)
+                {
+                    for (var rec of res)
+                    {
+                        routApprovedDeliveries.push(rec.properties.delivery_number);
+                    }
+                    
+                    // MobileCRM.bridge.alert("HandleApproved:  routApprovedDeliveries: " + routApprovedDeliveries);
+                    handleApproved3(routId, changedEntity, approved);
+                }
+                else { 
+                    // MobileCRM.bridge.alert("handleApproved2:  No recs");
+                }
+            }, (err) => { MobileCRM.bridge.alert("Failed to load approved delivery items.\nErr: " + err); }, null);
+        } // handleApproved2
+        
+
+        function handleApproved3(routId, changedEntity, approved)
+        {
+            // MobileCRM.bridge.alert("handleApproved3");
+
+            approved = approved || false;
+
+            // query for rout id and update 'rout_approved field according to '_allApproved' variable.
+            
+            let deliveryEntity= new MobileCRM.FetchXml.Entity("pr_rout");
+            deliveryEntity.addAttributes(); 
+            
+            filter= new MobileCRM.FetchXml.Filter();
+            filter.where("id", "eq",  routId);
+            deliveryEntity.filter = filter;          
+            var fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity);
+            fetch.execute("DynamicEntities", res => 
+            {
+                var changedRout = null;
+                
+                if(res.length > 0)
+                {
+                    // MobileCRM.bridge.alert(JSON.stringify(res[0]));
+                    changedRout = res[0]; 
+                    // MobileCRM.bridge.alert("Rout OK");
+                    // saveChangedDelivery(changedEntity, changedRout, approved);
+                    saveChangedRoute(changedRout,  approved)
+
+                } else {if(debug) _alert("Rout not found."); return; }           
+
+            }, (err) => { MobileCRM.bridge.alert("Failed to load delivery items.\nErr: " + err); }, null);
+            
+           
+            // ---------------------------------
+        } // handleApproved3
+       
+        //#region saveChangedDelivery
+        /*
+        function saveChangedDelivery(changedEntity, changedRout, approved)
+        {
+            // MobileCRM.bridge.alert("saveChangedDelivery");
+
+            if(!changedEntity) return;
+
+            changedEntity.save(err => 
+            {
+                if (err) 
+                { 
+                    MobileCRM.bridge.alert("Save 'delivery_approved' property on 'pr_delivery' entity failed\n" + err);  
+                }
+                else 
+                {
+                    // MobileCRM.UI.IFrameForm.setDirty(false);
+                    saveChangedRoute(changedRout,  approved);
+                    
+                    // update drop
+                    //saveChangedDrop(changedEntity, approved) 
+                }
+            });
+        } // saveChangedDelivery
+        */
+        //#endregion saveChangedDelivery
+
+        function saveChangedRoute(changedRout,  approved)
+        {
+            // MobileCRM.bridge.alert("saveChangedRoute");
+
+            if(!changedRout) return;
+
+            approved = ((typeof approved !== 'undefined' && approved != null) ? approved : false);
+
+            let _planned = routPlannedDeliveries;
+            let _approved = routApprovedDeliveries; 
+            let _remaining = diffAB(_planned, _approved); // find diff (_planned - _approved)
+            let _allApproved = (_remaining.length == 0);
+    
+            if(debug)MobileCRM.UI.MessageBox.sayText("Changed to Approved: " + approved +
+                                                    "\nPlanned deliveries:  " + _planned + 
+                                                    "\nApproved deliveries: " + _approved + 
+                                                    "\nRemaining: " + (_remaining.length > 0 ? _remaining : "All scanned") +
+                                                    "\nallApproved: " + _allApproved);
+            
+            // MobileCRM.bridge.alert("saveChangedRoute: _allApproved: " + _allApproved);
+            
+            changedRout.properties.rout_approved = _allApproved;
+        
+            // MobileCRM.bridge.alert("about to save...");
+         
+            changedRout.save(err => 
+            {
+                if (err) { MobileCRM.bridge.alert("saveChangedRoute: \n" + err); } else {if(debug) _alert("Save rout suceeded");}
+            }); // save
+        } // saveChangedRoute
+
+
+        function saveChangedDrop(changedEntity, approved)
+        {
+            changedEntity = changedEntity || null;
+            approved = approved || false;
+            
+            let dropId = changedEntity.properties.dropid.id;
+           
+            let drop = new MobileCRM.DynamicEntity("pr_drop", dropId);
+            if(drop)
+            {
+                let props = drop.properties;
+                props.drop_approved = approved;
+                drop.saveAsync()
+                    .then((savedEntity)=> { _alert("Drop updated.");})
+                    .catch((err)=> { _alert("Cannot save drop: " + err); });
+            }
+        }
+
+
+        //#endregion handleApproved
+
+        //#region getInfo
+        function getRoutPlannedDeliveries(routId)
+        {
+            try
+            {
+                // MobileCRM.bridge.alert( "getRoutPlannedDeliveries  routId: " + routId);
+
+                // fetch all planned pr_delivery entities...
+               
+                var deliveryEntity = new MobileCRM.FetchXml.Entity("pr_delivery");
+                deliveryEntity.addAttributes(); // this must be the name of field what represents the match of scanned value
+                deliveryEntity.filter = new MobileCRM.FetchXml.Filter();
+                // deliveryEntity.filter.where("rout", "eq",  routId);
+                deliveryEntity.filter.type = "and";
+                
+                var cnd1 = new MobileCRM.FetchXml.Condition();
+                cnd1.attribute = "route";
+                cnd1.operator = "eq";
+                cnd1.value = routId;
+            
+                //var cnd2 = new MobileCRM.FetchXml.Condition();
+                //cnd2.attribute = "delivery_approved";
+                //cnd2.operator = "eq";
+                //cnd2.value = true;
+
+                deliveryEntity.filter.conditions.push(cnd1);
+
+                var fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity);
+                fetch.execute("DynamicEntities", res => 
+                {
+                    for (var rec of res)
+                    {
+                        // routPlannedDeliveries 
+                        routPlannedDeliveries.push(rec.properties.delivery_number);
+                    }
+
+                    // MobileCRM.bridge.alert("routPlannedDeliveries: " + routPlannedDeliveries);    
+
+                }, (err) => { MobileCRM.bridge.alert("Failed to load rout's planned delivery items.\nErr: " + err); }, null);            
+
+            } catch(e){MobileCRM.bridge.alert("Error at getRoutPlannedDeliveries" + e.message);}
+        }; // getRoutPlannedDeliveries
+       
+        function getRoutApprovedDeliveries (routId)
+        {
+            try
+            {
+                // throw {message: " Hi, I'm an error."};  // works ok
+                // MobileCRM.bridge.alert( "getRoutApprovedDeliveries  routId: " + routId);
+
+                // fetch all approved pr_delivery entities for later use
+                
+                var deliveryEntity = new MobileCRM.FetchXml.Entity("pr_delivery");
+                deliveryEntity.addAttributes(); // this must be the name of field what represents the match of scanned value
+                deliveryEntity.filter = new MobileCRM.FetchXml.Filter();
+                deliveryEntity.filter.type = "and";
+                
+                var cnd1 = new MobileCRM.FetchXml.Condition();
+                cnd1.attribute = "route";
+                cnd1.operator = "eq";
+                cnd1.value = routId;
+            
+                var cnd2 = new MobileCRM.FetchXml.Condition();
+                cnd2.attribute = "delivery_approved";
+                cnd2.operator = "eq";
+                cnd2.value = true;
+                
+                deliveryEntity.filter.conditions.push(cnd1, cnd2);
+                
+            
+                var fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity);
+                fetch.execute("DynamicEntities", res => 
+                {
+                    for (var rec of res)
+                    {
+                        deliveryScanned.push(rec.properties.delivery_number);
+                        routApprovedDeliveries.push(rec.properties.delivery_number);
+                    }
+
+                    // MobileCRM.bridge.alert("routApprovedDeliveries: " + routApprovedDeliveries);    
+
+                }, (err) => { MobileCRM.bridge.alert("Failed to load approved delivery items.\nErr: " + err); }, null);
+
+            } catch(e){MobileCRM.bridge.alert("Error at getRoutApprovedDeliveries" + e.message);}
+
+        }; // getRoutApprovedDeliveries
+        
+        async function getDropApprovedDeliveries(scannedDropId)
+        {
+            try
+            {
+                // fetch all drop's approved pr_delivery entities for later use
+                
+                var deliveryEntity = new MobileCRM.FetchXml.Entity("pr_delivery");
+                deliveryEntity.addAttributes(); 
+                deliveryEntity.filter = new MobileCRM.FetchXml.Filter();
+                deliveryEntity.filter.type = "and";
+                
+                var cnd1 = new MobileCRM.FetchXml.Condition();
+                cnd1.attribute = "dropid";
+                cnd1.operator = "eq";
+                cnd1.value = scannedDropId;
+            
+                var cnd2 = new MobileCRM.FetchXml.Condition();
+                cnd2.attribute = "delivery_approved";
+                cnd2.operator = "eq";
+                cnd2.value = true;
+                
+                deliveryEntity.filter.conditions.push(cnd1, cnd2);
+                
+            
+                let fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity);
+                let recs = await fetch.executeAsync("DynamicEntities", res => 
+                {
+                    // for (var rec of res)
+                    //{
+                    //    deliveryScanned.push(rec.properties.delivery_number);
+                    //    routApprovedDeliveries.push(rec.properties.delivery_number);
+                    //}
+
+                    // MobileCRM.bridge.alert("dropApprovedDeliveries: " +dropApprovedDeliveries);    
+
+                }, (err) => { MobileCRM.bridge.alert("Failed to load drop's approved delivery items.\nErr: " + err); }, null);
+
+               
+                for (var rec of recs)
+                {
+                    dropScannedDeliveries.push(rec.properties.delivery_number);
+                }
+
+                // MobileCRM.bridge.alert("dropScannedDeliveries: " + dropScannedDeliveries);    
+
+                return;
+
+            } catch(e){MobileCRM.bridge.alert("getDropApprovedDeliveries:\n" + e.message);}
+
+        } // getDropApprovedDeliveries
+        
+        function getRoutDrops(routId)
+        { 
+            let routEntity = new MobileCRM.FetchXml.Entity("pr_drop");
+            routEntity.addAttributes(); 
+            routEntity.filter = new MobileCRM.FetchXml.Filter();
+            routEntity.filter.type = "and";
+            
+            let cnd1 = new MobileCRM.FetchXml.Condition();
+            cnd1.attribute = "routid";
+            cnd1.operator = "eq";
+            cnd1.value = routId;
+            
+            // let  cnd2 = new MobileCRM.FetchXml.Condition();
+            // cnd2.attribute = "rout_approved";
+            // cnd2.operator = "eq";
+            // cnd2.value = true;
+            
+            routEntity.filter.conditions.push(cnd1);   // , cnd2
+             
+            let fetch = new MobileCRM.FetchXml.Fetch(routEntity); 
+            fetch.execute("DynamicEntities", res => 
+            {
+                let a = res;
+                if(res.length > 0)
+                { 
+                    for (var rec of res)
+                    {
+                        // routDrops.push(rec.id); // good
+                        routDrops.push(rec.properties.drop_number);
+                    }
+                    
+                    // MobileCRM.bridge.alert("getRoutDrops:  routDrops: " + routDrops);
+                }
+                else { 
+                    // MobileCRM.bridge.alert("getRoutDrops:  No recs");
+                }
+            }, (err) => { MobileCRM.bridge.alert("Failed to load drop items.\nErr: " + err); }, null);
+        } // getRoutDrops
+
+        async function getDropPlannedDeliveries(dropEntity, dropId, scannedDropNum, scannedBarcode)
+        {
+            try
+            {
+                dropEntity = dropEntity || null;
+                scannedDropNum = scannedDropNum || 0;
+                scannedBarcode = scannedBarcode || 0;
+                dropPlannedDeliveries = [];
+                // _alert( "getDropPlannedDeliveries  dropId: " + dropId);
+
+                var deliveryEntity = new MobileCRM.FetchXml.Entity("pr_delivery");
+                deliveryEntity.addAttributes(); 
+                deliveryEntity.filter = new MobileCRM.FetchXml.Filter();
+                
+                deliveryEntity.filter.type = "and";
+                
+                var cnd1 = new MobileCRM.FetchXml.Condition();
+                cnd1.attribute = "dropid";
+                cnd1.operator = "eq";
+                cnd1.value = dropId;
+            
+                // var cnd2 = new MobileCRM.FetchXml.Condition();
+                // cnd2.attribute = "delivery_approved";
+                // cnd2.operator = "eq";
+                // cnd2.value = true;
+
+                deliveryEntity.filter.conditions.push(cnd1);
+
+                let fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity);
+                let recs = await fetch.executeAsync("DynamicEntities", res => 
+                {               
+                    if(debug) _alert("dropPlannedDeliveries: " + dropPlannedDeliveries); 
+                }, (err) => { _alert("Failed to load drops's planned delivery items.\nErr: " + err); return null}, null);   
+                
+                // MobileCRM.bridge.alert(JSON.stringify(recs[0]));
+                for (var rec of recs) { dropPlannedDeliveries.push(rec.properties.delivery_number);  }
+                
+                // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+                
+                // if delivery belongs to planned deliveries push it to dropsScanned
+                let isRelevantDelivery = (dropPlannedDeliveries.findIndex(x => x === scannedBarcode) > -1); 
+
+                // _alert("dropPlannedDeliveries: " + dropPlannedDeliveries +
+                //        "\ndropScannedDeliveries: " + dropScannedDeliveries +
+                //        "\nscannedBarcode: " + scannedBarcode +
+                //        "\nisRelevantDelivery: " + isRelevantDelivery);
+                
+                
+                if(isRelevantDelivery)
+                {
+                    dropScannedDeliveries.push(scannedDropNum);
+                    // getDropScannedDeliveries
+
+                    let _planned = dropPlannedDeliveries;
+                    let _approved = dropScannedDeliveries;    
+                    let _remaining = diffAB(_planned, _approved); // diff (_planned - _approved)
+                    let allScanned = (_remaining.length == 0);
+
+
+                    if(debug) _alert("isRelevantDelivery: " + isRelevantDelivery +
+                                    "\nDrop Planned deliveries:  " + _planned + 
+                                    "\nDrop Scanned deliveries: " + deliveryScanned + 
+                                    "\nRemaining: " + (_remaining.length > 0 ? _remaining : "All scanned") +
+                                    "\nallScanned: " + allScanned );
+
+                    // approve drop
+                    
+                    // -----
+
+                    let drop = new MobileCRM.DynamicEntity("pr_drop", dropId);
+                    if(drop)
+                    {
+                        let props = drop.properties;
+                        props.drop_approved = allScanned;
+                        drop.saveAsync()
+                            .then((savedEntity)=> { })
+                            .catch((err)=> { _alert("Cannot save drop: " + err); });
+                    }
+                    // ------
+                    //#region app0
+                    /*
+                    if(dropEntity)
+                    {
+                        
+                        dropEntity.properties.drop_approved = allScanned;
+                        _alert("approving drop. All scanned: " + dropEntity.properties.drop_approved);
+
+
+                        dropEntity.entity.save(err => 
+                        { 
+                            if (err) {MobileCRM.bridge.alert("Save 'drop_approved' property on 'pr_drop' entity failed"); } 
+                        });
+                    }
+                    */
+                    //#endregion app0
+
+                } // isRelevantDelivery
+
+            } catch(e){MobileCRM.bridge.alert("Error at getDropPlannedDeliveries" + e.message);}
+        } // getDropPlannedDeliveries
+
+
+
+        //#endregion getInfo
+
+        // handleScannedDelivery1 =  (entityForm, scannedBarcode) =>
+        function handleScannedDelivery1(scannedBarcode, entityForm)
+        {
+            let entity = entityForm.entity;
+            let numRoutPlanned = entity.properties.rout_planned_deliveries || 0;
+            let numPrevScanned = deliveryScanned.length || 0; // before this scan...
+            let routId = entityForm.entity.id;
+            let routName = entityForm.entity.name;
+
+            //-------------------------------------------------------
+            let _planned = routPlannedDeliveries;
+            let _approved = routApprovedDeliveries;
+            let _drops = routDrops;
+
+                // find diff (_planned - _approved)
+            let _remaining = diffAB(_planned, _approved);
+            // ------------------------------------------------------------
+
+            // !allScanned
+            let isNewBarcode = (deliveryScanned.findIndex(x => x === scannedBarcode) === -1);  // notFound
+            let isRelevant = (_planned.findIndex(x => x === scannedBarcode) > -1); 
+
+            if(isNewBarcode && isRelevant) deliveryScanned.push(scannedBarcode);
+
+            // -----------------------------------------------
+            let _remainingAfterScan = diffAB(_planned, deliveryScanned);
+
+            // let numScanned = deliveryScanned.length;
+            let allScanned = (_remainingAfterScan.length == 0) // (numScanned === numRoutPlanned);
+
+            //#region showParams2
+            if(debug) MobileCRM.UI.MessageBox.sayText("entity : " + entity +
+                                                      "\nScanned barcode: " + scannedBarcode +
+                                                      "\nisNewBarcode: " + isNewBarcode + 
+                                                      "\nisRelevant: " + isRelevant +
+                                                      "\nPlanned deliveries:  " + _planned + 
+                                                      "\nScanned deliveries: " + deliveryScanned + 
+                                                      "\nRemaining after scan: " + (_remainingAfterScan.length > 0 ? _remainingAfterScan : "All scanned") +
+                                                      "\nallScanned: " + allScanned );
+            //#endregion showParams2
+            
+            if (allScanned)
+                MobileCRM.UI.EntityForm.enableCommand(SCAN_COMMAND, false);  // Cancel command
+
+            
+            
+            if(!isNewBarcode)
+                return;
+
+            // New Barcode
+            getDeliveryItem1(routId, scannedBarcode, isRelevant, handleDeliveryItem1);
+        
+        } // handleScannedDelivery1
+
+        
+        function getDeliveryItem1 (routId, scannedBarcode, isRelevant, continueWith) 
+        {
+            // MobileCRM.bridge.alert("getDeliveryItem1");
+
+            scannedBarcode = scannedBarcode || 0;
+            routId = routId || 0;
+            
+            let deliveryEntity= new MobileCRM.FetchXml.Entity("pr_delivery");
+            deliveryEntity.addAttributes(); // name of field what represents the match of scanned value
+            
+            filter= new MobileCRM.FetchXml.Filter();
+            filter.where("barcode", "like",  scannedBarcode);
+            deliveryEntity.filter = filter;
+            
+            let fetch = new MobileCRM.FetchXml.Fetch(deliveryEntity);
+
+            fetch.execute("DynamicEntities", res => 
+            {
+                var rec = null;
+                // MobileCRM.bridge.alert(JSON.stringify(res[0]));
+                if(res.length > 0)
+                {
+                    rec = res[0]; 
+                    if(debug) MobileCRM.bridge.alert("scannedBarcode: " + scannedBarcode + "\nrec barcode: " + rec.properties.barcode);
+                    continueWith(scannedBarcode, isRelevant, rec);
+                } 
+                else
+                {
+                    MobileCRM.bridge.alert("scannedBarcode: " + scannedBarcode +  "\nDelivery not found.");
+                    return;    
+                }           
+
+            }, (err) => { MobileCRM.bridge.alert("Failed to load delivery items.\nErr: " + err); }, null);
+
+        }; // getDeliveryItem1
+
+
+        function handleDeliveryItem1(scannedBarcode, isRelevant, scannedEntity)
+        {
+            scannedBarcode = scannedBarcode || 0;
+
+            if (scannedEntity) 
+            {
+                // deliveryScanned.push(scannedBarcode);
+                // if (scannedEntity.properties.delivery_approved) 
+                //{   // this should not happens, since at the beginning we check approved deliveries.
+                //      // scanDeliveryItem(deliveryScanned.length);
+                //    return;
+                // }
+                
+
+                if(!isRelevant)
+                {
+                    let irrelevantRoutName = scannedEntity.properties.route.primaryName;
+                    MobileCRM.bridge.alert("פריט זה לא שייך לקו ההפצה הנוכחי. הפריט שייך לקו הפצה\n" + irrelevantRoutName);
+                    return;
+                }
+
+                scannedEntity.properties.delivery_approved = true;
+                //-------- drops ------------------------------- 
+                let scannedDropId = scannedEntity.properties.dropid.id;
+                
+                // if scannedDrop is in routDrops, push to dropsScanned
+                if(true) getDeliveryDrop1(scannedDropId, scannedBarcode); // <<<<<<<<<<<<<<<  drops <<<<<<<<<<<<<<<<
+                
+                // MobileCRM.bridge.alert("Drops Scanned: " + dropsScanned + "\nscannedDropId: " + scannedDropId);
+                // ---------------------------------------------
+        
+                scannedEntity.save(err => 
+                {
+                    if (err) {_alert("Save 'delivery_approved' property on 'pr_delivery' entity failed\n" + err); }
+                    else { setRouteProperties1(); }
+                }); // save
+
+            } // if scannedEntity
+
+        } // handleScannedRec
+
+
+        function setRouteProperties1()
+        {
+            MobileCRM.UI.EntityForm.requestObject(entityForm => 
+            {
+                let numScanned = deliveryScanned.length;
+                // let numPlanned = entityForm.entity.properties.rout_planned_deliveries;
+                let _planned = routPlannedDeliveries;
+               
+                let _remainingAfterScan = diffAB(_planned, deliveryScanned); //  diff (_planned - deliveryScanned)
+                let allScanned = (_remainingAfterScan.length == 0) ;
+
+
+                if(debug) _alert("\nPlanned deliveries:  " + _planned + 
+                                "\nScanned deliveries: " + deliveryScanned + 
+                                "\nRemaining: " + (_remainingAfterScan.length > 0 ? _remainingAfterScan : "All scanned") +
+                                "\nallScanned: " + allScanned );
+
+
+                let entityName = entityForm.entity.entityName;
+
+                if(debug) MobileCRM.bridge.alert("EntityName: " + entityName);
+
+                entityForm.entity.properties.rout_approved = allScanned;
+                entityForm.entity.properties.rout_planned_deliveries = _planned.length;
+                entityForm.entity.properties.route_actual_deliveries = numScanned;
+
+
+                // MobileCRM.bridge.alert("setRouteProperties1:  numScanned: " + numScanned);
+
+                if (allScanned) 
+                {
+                    // entityForm.entity.properties.rout_approved = true;
+                    MobileCRM.bridge.alert("כל האספקות נסרקו בהצלחה.");
+                    MobileCRM.UI.EntityForm.enableCommand(SCAN_COMMAND, false);
+                }
+                else  
+                {
+                    // try to scan again if it is possible.
+                    // scanDeliveryItem(entityForm.entity.properties.rout_planned_deliveries);
+                }
+                
+                // apply changes
+                // --- save rout ---
+                if(debug) MobileCRM.bridge.alert("about to save... \nactual: " + entityForm.entity.properties.route_actual_deliveries);
+
+                
+                entityForm.entity.save(err => 
+                { 
+                    if (err) {MobileCRM.bridge.alert("Save 'rout_approved' property on 'pr_rout' entity failed"); } 
+                });
+                
+                return true;
+
+            }, MobileCRM.bridge.alert, null);
+
+        } // setRouteEntityProperties1
+        
+        
+        function handleApprovedDelivey(rec)
+        {
+            debugger;
+            MobileCRM.bridge.alert("handleApprovedDelivey");
+        } // handleApprovedDelivey
+        
+
+        function getDeliveryDrop(scannedDropId, scannedBarcode) // async - replaced by getDeliveryDrop1
+        {
+            scannedDropId = scannedDropId || 0;
+            scannedBarcode = scannedBarcode || 0;
+
+            MobileCRM.DynamicEntity.loadById("pr_drop", scannedDropId, (entity)=>
+            {
+                // MobileCRM.bridge.alert(JSON.stringify(entity.properties));
+                let _drops = routDrops;
+                let scannedDropNum = entity.properties.drop_number;
+                let isRelevant = (_drops.findIndex(x => x === scannedDropNum) > -1); 
+
+                if(isRelevant && scannedDropId != null)
+                {
+                    let dummy = null;
+                    getDropPlannedDeliveries(dummy, scannedDropId, scannedDropNum, scannedBarcode); 
+                }
+                
+                if(debug) MobileCRM.bridge.alert("scannedDropNum: " + scannedDropNum);
+
+            }, function (error) { MobileCRM.bridge.alert("An error occurred: " + error);}, null );
+           
+            //#region tmp3
+            /*
+            let dropEntity= new MobileCRM.FetchXml.Entity("pr_drop");
+            dropEntity.addAttributes(); // name of field what represents the match of scanned value
+            
+            filter= new MobileCRM.FetchXml.Filter();
+            // filter.where("id", "like",  scannedDropId);
+
+            dropEntity.filter.type = "and";
+                
+            //let cnd1 = new MobileCRM.FetchXml.Condition();
+            //cnd1.attribute = "barcode";
+            //cnd1.operator = "like";
+            //cnd1.value = scannedBarcode;
+        
+            let cnd2 = new MobileCRM.FetchXml.Condition();
+            cnd2.attribute = "id";
+            cnd2.operator = "eq";
+            cnd2.value = scannedDropId;
+            dropEntity.filter.conditions.push(cnd2);
+            
+            let fetch = new MobileCRM.FetchXml.Fetch(dropEntity);
+
+            fetch.execute("DynamicEntities", res => 
+            {
+                let rec = null;
+                // MobileCRM.bridge.alert(JSON.stringify(res[0]));
+                if(res.length > 0)
+                {
+                    rec = res[0]; 
+                    MobileCRM.bridge.alert("scannedDropId: " + scannedDropId + "\nrec drop number: " + rec.properties.drop_number);
+                    continueWith(scannedBarcode, isRelevant, rec);
+                } 
+                else
+                {
+                    MobileCRM.bridge.alert("scannedDropId: " + scannedDropId +  "\nDrop not found.");
+                    return;    
+                }           
+
+            }, (err) => { MobileCRM.bridge.alert("getDeliveryDrop: Failed to load drop records.\nErr: " + err); }, null);
+            */
+            //#endregion tmp3
+        }; // getDeliveryDrop
+
+
+
+
+        //////////////////////////////////////////////////////////////////////////
+        async function getDeliveryDrop1(scannedDropId, scannedBarcode)
+        {
+            
+            scannedDropId = scannedDropId || 0;
+            scannedBarcode = scannedBarcode || 0;
+
+            let entity = await MobileCRM.DynamicEntity.loadAsync("pr_drop", scannedDropId);
+            // _alert(entity.properties.drop_number); // 
+            
+            let _drops = routDrops;
+            let scannedDropNum = entity.properties.drop_number;
+            let isRelevant = (_drops.findIndex(x => x === scannedDropNum) > -1); 
+
+            if(isRelevant && scannedDropId != null)
+            {
+                let tmp1 = await getDropApprovedDeliveries(scannedDropId);
+                // _alert("dropScannedDeliveries: " + dropScannedDeliveries);
+                
+                getDropPlannedDeliveries(entity, scannedDropId, scannedDropNum, scannedBarcode); 
+            }
+        } // getDeliveryDrop1
+        /////////////////////////////////////////////////////////////////////////////////////
+        
+        // -----------------------------------------------------------------------------------------------------
+        //#region utils
+        Array.prototype.remove = function() {
+            var what, a = arguments, L = a.length, ax;
+            while (L && this.length) {
+                what = a[--L];
+                while ((ax = this.indexOf(what)) !== -1) {
+                    this.splice(ax, 1);
+                }
+            }
+            return this;
+        };
+
+        let sameArrays = (a,b) =>
+        {
+            let info = "";
+            
+            let bothArrays = (Array.isArray(a) && Array.isArray(b));
+            let sameSize = (a.length === b.length);
+            
+            info = ('both arrays: ' + bothArrays);
+            info += ('\nsame size: ' + sameSize);
+            
+            // check both are array 
+            if(!bothArrays) {log(info); return false; } 
+            
+            // check both are same size
+            else if(!sameSize) {log(info); return false; } 
+            
+            
+            // check unique for elements in a
+            let sorted_a = a.slice().sort();
+            let unique_a = true;                                     
+            for (let i=0; i<sorted_a.length-1 && unique_a; i++) 
+            {
+                unique_a = (sorted_a[i+1] != sorted_a[i]);
+            }
+            info += ('\nunique_a ' + unique_a);
+            if(!unique_a) {log(info); return false; } 
+                
+            // check duplicate elements in b
+            let sorted_b = b.slice().sort();
+            let unique_b = true;                                     
+            for (let i=0; i<sorted_b.length-1 && unique_b; i++) 
+            {
+                unique_b = (sorted_b[i+1] != sorted_b[i]);
+            }
+            info += ('\nunique_b ' + unique_b);
+            if(!unique_b) {log(info); return false; }   
+            
+            // check all elements are in both arrays
+            let sameElements=true;
+            for(k=0;  k < a.length && sameElements ; k++)
+            {
+                sameElements = b.findIndex(x => x === a[k]) > -1; 
+            }
+            info += ('\nsameElements: ' + sameElements);
+            
+            log(info);
+
+            return sameElements;
+        }; // sameArrays
+
+
+        let diffAB = (a,b) =>
+        {
+            let out = a.filter(item => !b.some(other => item == other));
+            log('diffAB: ' + out);
+            return out;
+        };
+        
+
+        let diffBA = (a,b) =>
+        {
+            let out = b.filter(item => !a.some(other => item == other));
+            log('diffBA: ' + out);
+            return out;
+        };
+
+        let sameArray1 = (a,b) => // do not use
+        {
+            let out = ((diffAB(a,b).length === 0) && (diffBA(a,b).length === 0)); 
+            log('sameArray1: ' + out);
+            return out;
+        };
+
+        // --------------------------
+        let log = (info) =>
+        {
+            logInfo += info + "\n";
+        };
+        // -------------------------
+
+         
+        async function getRelatedRecs(entityName, lookupName, id) // GOOD
+        {
+            try
+            {
+                // MobileCRM.bridge.alert( "getRelatedRecs  Id: " + id);
+                if(!entityName) 
+                    { MobileCRM.bridge.alert("getRelatedRecs:  Missing entity name."); return null; }
+
+                if(!lookupName)
+                    { MobileCRM.bridge.alert("getRelatedRecs:  Missing lookup name."); return null; }
+                
+                if(!id)
+                    { MobileCRM.bridge.alert("getRelatedRecs:  Missing id."); return null; }
+               
+                let entity = new MobileCRM.FetchXml.Entity(entityName);
+                entity.addAttributes(); 
+                entity.filter = new MobileCRM.FetchXml.Filter();
+                entity.filter.type = "and";
+                
+                let cnd1 = new MobileCRM.FetchXml.Condition();
+                cnd1.attribute = lookupName;
+                cnd1.operator = "eq";
+                cnd1.value = id;
+            
+                // additional optional condition
+                // let cnd2 = new MobileCRM.FetchXml.Condition();
+                // cnd2.attribute = "delivery_approved";
+                // cnd2.operator = "eq";
+                // cnd2.value = true;
+
+                entity.filter.conditions.push(cnd1);
+
+                let fetch = new MobileCRM.FetchXml.Fetch(entity);
+                let recs = await fetch.executeAsync("DynamicEntities", res => {}, 
+                           (err) => { MobileCRM.bridge.alert("Failed to load recs.\n" + err); }, null);   
+                
+                // MobileCRM.bridge.alert(JSON.stringify(recs[0]));
+                return recs
+            } catch(e){MobileCRM.bridge.alert("getRelatedRecs: " + e.message);}
+        } // getRelatedRecs
+
+
+        
+        async function getEntityRec (entityType, id) 
+        {
+            if(!id) {MobileCRM.bridge.alert("getEntityRec: Missing id"); return null; }
+
+            if(!entityType) {MobileCRM.bridge.alert("getEntityRec: Missing entityType");return null; }
+        
+            
+        
+        }; // getEntityRec
+
+        async function _alert(title,button1Name, action1, button2Name, action2) 
+        {
+            title = title || "Unknown title";
+            button1Name = button1Name || "Close";
+            action1 = action1 || null;
+            button2Name = button2Name || null;
+            action2 = action2 || null;
+            
+            let popup = new MobileCRM.UI.MessageBox(title);
+            if(button1Name) popup.items.push(button1Name);
+            if(button2Name) popup.items.push(button2Name);
+            popup.multiLine = true;
+            let button = await popup.showAsync();
+            if (button == button1Name) action1();
+            else if (button == button1Name) action2();
+        } // _alert
+
+        async function confirmMsg(title) 
+        {
+            let popup = new MobileCRM.UI.MessageBox(title);
+            /// Add the buttons for message box
+            popup.items = ["Yes", "No"];
+            /// If title is too long set the 'multi-line' to true
+            popup.multiLine = true;
+            var button = await popup.showAsync();
+            if (button == "Yes")
+                MobileCRM.bridge.alert("You taped on 'Yes' button");
+            else
+                MobileCRM.bridge.alert("You taped on 'NO' button");
+        }
+     
+        //#endregion utils
+        
+
+        // ----------------------------------------------------------------------------------------------------
+        //#region getRelatedRecs
+        /*
+        function getRelatedRecs1()
+        {
+            let entity = new MobileCRM.FetchXml.Entity("account");
+            entity.addAttribute("name");
+            entity.addAttribute("address1_city");
+            let linkEntity = entity.addLink("contact", "parentcustomerid", "accountid", "outer");
+
+            linkEntity.addAttribute("fullname");
+            linkEntity.addAttribute("contactid");
+
+            entity.filter = new MobileCRM.FetchXml.Filter();
+            entity.filter.where("address1_city", "like", "Redmond");
+
+            let orderCity = new MobileCRM.FetchXml.Order("name");
+            let dataSpan = document.createElement("span");
+
+            let fetch = new MobileCRM.FetchXml.Fetch(entity);
+            fetch.execute("Array",  (result) =>
+            {
+               for (var i in result) 
+               {
+                  var contact = result[i]
+                  data.innerHTML += "<p>Account Name : " + contact[0] + "</p>" + "<p>City : " + contact[1] + "</p>"+"<p>Contact Name : " + contact[2] + "</p>"
+               }
+            }, (err) => { alert("Error has occurred: " + err);  }, null);
+        } // getRelatedRecs1
+        */
+        //#endregion getRelatedRecs
 
         var drops  = ['aaaa','bbbb','ccccc'];
 
@@ -348,7 +1466,7 @@
             if (deliveryScanned.length === rout_planned_deliveries) // scannedAllRoutDeliveries
             {
                 MobileCRM.bridge.alert("Everything is scanned successfully");
-                MobileCRM.UI.EntityForm.enableCommand(COMMAND_NAME, false);
+                MobileCRM.UI.EntityForm.enableCommand(SCAN_COMMAND, false);
             }
             else // !scannedAllRoutDeliveries
             {
@@ -433,6 +1551,67 @@
         } // GetDeliveryDrops
         
         //#endregion init1
+
+
+
+        async function showRoutList() 
+        {
+            try 
+            {
+                var lookupForm = new MobileCRM.UI.LookupForm();
+                
+                // add additional filtering to lookup form
+                var customXMLView = '<fetch version="1.0"><entity name="pr_rout">' +
+                '<filter type="and"><condition attribute="rout_number" operator="like" value="11"/></filter></entity></fetch>';
+                
+                lookupForm.addEntityFilter("pr_rout", customXMLView)
+                lookupForm.addView("pr_rout", "Approved1");
+                lookupForm.allowNull = true; // Allow choosing empty value
+                var accountRef = await lookupForm.showAsync();
+                
+                /*
+                // Change the parent customer on currently edited contact entity
+                MobileCRM.UI.EntityForm.requestObject(
+                    function (entityForm) 
+                    {
+                        /// <param name="entityForm" type="MobileCRM.UI.EntityForm"/>
+                        var editedContact = entityForm.entity;
+                        var newCustomer = accountRef ? new MobileCRM.Reference(accountRef.entityName, accountRef.id, accountRef.primaryName) : null;
+                        editedContact.properties["routid"] = newCustomer;
+                    },
+                    MobileCRM.bridge.alert
+                );
+                */
+            }
+            catch (err) { MobileCRM.bridge.alert(err);   }
+        }
+
+
+        function showRoutView()
+        {
+            try
+            {
+                debugger;
+                MobileCRM.UI.EntityList.requestObject(entityList => 
+                {
+                    /// <param name='entityList' type='MobileCRM.UI.EntityList'>
+                    var listView = entityList.listView;
+                    
+                    // Select the first record.
+                    // listView.selectedIndex = 0;
+                    
+                    /*
+                    // Take the first button (if any).
+                    var button = entityList.listButtons[0];
+                    if (button)
+                    {
+                        MobileCRM.bridge.alert("button '" + button + "' was clicked.")
+                        MobileCRM.UI.EntityList.runCommand(button); // Run its command.
+                    }
+                    */
+                }, MobileCRM.bridge.alert, null);
+            }catch (err) { MobileCRM.bridge.alert(err);   }
+        } // showRoutView
 
 
 	</script>

@@ -60,28 +60,29 @@
       <Width>320</Width>
       <Height>48</Height>
       <SerializedBackground>-10961362</SerializedBackground>
+      <SerializedSelectedBackground>-10961362</SerializedSelectedBackground>
       <SerializedChildren>
         <CellTemplate SchemaName="name">
           <StyleName>Primary Center White Green</StyleName>
           <Bounds>76,2,243,23</Bounds>
-          <CellKind>4</CellKind>
+          <CellKind>0</CellKind>
           <Anchor>5</Anchor>
         </CellTemplate>
         <CellTemplate SchemaName="drop_number">
           <StyleName>Primary Center White Green</StyleName>
-          <Bounds>1,1,74,23</Bounds>
+          <Bounds>2,2,74,23</Bounds>
           <CellKind>3</CellKind>
           <Anchor>5</Anchor>
         </CellTemplate>
         <CellTemplate SchemaName="drop_approved">
           <StyleName>Primary Center White Green</StyleName>
-          <Bounds>2,25,157,20</Bounds>
-          <CellKind>0</CellKind>
+          <Bounds>2,25,157,21</Bounds>
+          <CellKind>3</CellKind>
           <Anchor>5</Anchor>
         </CellTemplate>
         <CellTemplate SchemaName="drop_fulfilled">
           <StyleName>Primary Center White Green</StyleName>
-          <Bounds>161,25,158,20</Bounds>
+          <Bounds>161,25,158,21</Bounds>
           <CellKind>0</CellKind>
           <Anchor>5</Anchor>
         </CellTemplate>

@@ -1,18 +1,18 @@
 ﻿<Dashboard xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:dummy="0">
-  <Columns>3</Columns>
-  <Rows>1</Rows>
+  <Columns>1</Columns>
+  <Rows>4</Rows>
   <Items>
     <DashboardComponent xsi:type="DashboardEntityComponent" Kind="List" Binding="pr_rout;&lt;extra&gt;&lt;actions&gt;0;0;1&lt;/actions&gt;&lt;/extra&gt;" Options="3">
-      <Bounds>0,0,1,1</Bounds>
+      <Bounds>0,1,1,1</Bounds>
       <LegacyConfig>pr_rout</LegacyConfig>
     </DashboardComponent>
-    <DashboardComponent xsi:type="DashboardEntityComponent" Kind="List" Binding="pr_drop;&lt;extra&gt;&lt;actions&gt;0;0;1&lt;/actions&gt;&lt;/extra&gt;" Options="3">
-      <Bounds>1,0,1,1</Bounds>
-      <LegacyConfig>pr_drop</LegacyConfig>
-    </DashboardComponent>
     <DashboardComponent xsi:type="DashboardEntityComponent" Kind="List" Binding="pr_delivery;&lt;extra&gt;&lt;actions&gt;0;0;1&lt;/actions&gt;&lt;/extra&gt;" Options="3">
-      <Bounds>2,0,1,1</Bounds>
+      <Bounds>0,2,1,1</Bounds>
       <LegacyConfig>pr_delivery</LegacyConfig>
+    </DashboardComponent>
+    <DashboardComponent xsi:type="DashboardEntityComponent" Kind="List" Binding="pr_distribution;&lt;extra&gt;&lt;actions&gt;0;0;1&lt;/actions&gt;&lt;/extra&gt;" Options="3">
+      <Bounds>0,0,1,1</Bounds>
+      <LegacyConfig>pr_distribution</LegacyConfig>
     </DashboardComponent>
   </Items>
 </Dashboard>
